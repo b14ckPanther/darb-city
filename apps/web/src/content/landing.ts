@@ -44,7 +44,8 @@ const CLIENT_URLS = {
 export const landing: Record<Locale, LandingCopy> = {
   he: {
     title: "דרב | דרך אחת לכל עסק",
-    description: "מוצאים כל עסק, כמו שמדברים. ולבעלי עסקים: אפליקציה שנבנתה רק בשבילכם.",
+    description:
+      "כל העסקים באזור שלכם במקום אחד, מהמספרה ועד המוסך. מחפשים בדרב כמו שמדברים, בעברית, בערבית או באנגלית. ולבעלי עסקים: אפליקציה משלכם.",
     hero: {
       eyebrow: "דרב · درب · Darb",
       title: "דרך אחת",
@@ -113,7 +114,8 @@ export const landing: Record<Locale, LandingCopy> = {
   },
   ar: {
     title: "درب | درب واحد لكل مصلحة",
-    description: "لاقي أي مصلحة متل ما بتحكي. ولأصحاب المصالح: تطبيق معمول إلكم وبس.",
+    description:
+      "كل المصالح بمنطقتك بمكان واحد، من الحلاق للكراج. دوّر بدرب متل ما بتحكي، بالعربي أو بالعبري أو بالإنجليزي. ولأصحاب المصالح: تطبيق إلكم وبس.",
     hero: {
       eyebrow: "درب · דרב · Darb",
       title: "درب واحد",
@@ -179,7 +181,8 @@ export const landing: Record<Locale, LandingCopy> = {
   },
   en: {
     title: "Darb | One path to every business",
-    description: "Find any business the way you talk. And for owners: an app built for you alone.",
+    description:
+      "Every business around you in one place, from the barber to the garage. Search Darb the way you talk, in Hebrew, Arabic or English. Own a business? You get an app of your own.",
     hero: {
       eyebrow: "Darb · درب · דרב",
       title: "One path",

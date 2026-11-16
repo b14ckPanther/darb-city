@@ -87,7 +87,7 @@ const mod = await import("./sitemap");
 const { default: sitemap, generateSitemaps } = mod;
 afterEach(() => vi.unstubAllEnvs());
 
-it("per locale: a sitemap of pages and slices of real businesses", async () => {
+it("per locale: a sitemap of pages (with each place's kinds) and slices of real businesses", async () => {
   vi.stubEnv("SITE_URL", "https://darb.co.il");
   const ids = (await generateSitemaps()).map((s) => s.id);
   expect(ids.slice(0, 3)).toEqual([0, 1, 2]);
@@ -97,15 +97,22 @@ it("per locale: a sitemap of pages and slices of real businesses", async () => {
   const en = await sitemap({ id: Promise.resolve("200") });
   expect(en.map((e) => e.url)).toEqual([
     "https://darb.co.il/en",
+    "https://darb.co.il/en/israel",
+    "https://darb.co.il/en/for-business",
+    "https://darb.co.il/en/showroom",
+    "https://darb.co.il/en/pricing",
+    "https://darb.co.il/en/join",
+    "https://darb.co.il/en/contact",
     "https://darb.co.il/en/accessibility",
     "https://darb.co.il/en/terms",
     "https://darb.co.il/en/privacy",
     "https://darb.co.il/en/sakhnin",
     "https://darb.co.il/en/sakhnin/food",
+    "https://darb.co.il/en/sakhnin/food/restaurants",
     "https://darb.co.il/en/k/restaurants",
   ]);
-  expect(en[1]?.alternates?.languages).toMatchObject({ he: "https://darb.co.il/accessibility" });
-  expect(en[4]?.alternates?.languages).toMatchObject({ he: "https://darb.co.il/sakhnin" });
+  expect(en[7]?.alternates?.languages).toMatchObject({ he: "https://darb.co.il/accessibility" });
+  expect(en[10]?.alternates?.languages).toMatchObject({ he: "https://darb.co.il/sakhnin" });
   const businesses = await sitemap({ id: Promise.resolve("201") });
   expect(businesses.map((e) => e.url)).toEqual([
     "https://darb.co.il/en/sakhnin/food/restaurants/caramel",
@@ -124,8 +131,8 @@ it("gives the Hebrew home the bare origin", async () => {
   vi.stubEnv("SITE_URL", "https://darb.co.il");
   const he = await sitemap({ id: Promise.resolve("0") });
   expect(he[0]?.url).toBe("https://darb.co.il/");
-  expect(he[1]?.url).toBe("https://darb.co.il/accessibility");
-  expect(he[4]?.url).toBe("https://darb.co.il/sakhnin");
+  expect(he[1]?.url).toBe("https://darb.co.il/israel");
+  expect(he[10]?.url).toBe("https://darb.co.il/sakhnin");
 });
 
 it("renders on request, so the build never needs the API (its fetches stay cached a day)", () => {

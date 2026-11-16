@@ -140,12 +140,10 @@ export default async function LandingPage({ params }: Props) {
             </div>
             <div className={styles.compare}>
               <p className={`${styles.side} ${styles.without}`}>
-                <strong>{copy.platform.without.label}</strong>
-                {copy.platform.without.body}
+                <strong>{copy.platform.without.label}</strong> {copy.platform.without.body}
               </p>
               <p className={`${styles.side} ${styles.with}`}>
-                <strong>{copy.platform.with.label}</strong>
-                {copy.platform.with.body}
+                <strong>{copy.platform.with.label}</strong> {copy.platform.with.body}
               </p>
             </div>
           </div>
