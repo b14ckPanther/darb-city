@@ -529,6 +529,9 @@
 }
 .linkedRow {
   position: relative;
+  /* Safari ignores `position` on a table row, so the row link's ::after spread over the whole
+     page (it covered the search box and opened a business). A transform holds it in the row. */
+  transform: translate(0);
 }
 .linkedRow input,
 .linkedRow button,
