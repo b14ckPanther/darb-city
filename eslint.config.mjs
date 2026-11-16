@@ -19,6 +19,8 @@ export default defineConfig(
     "apps/web/test-results/**",
     "apps/web/public/map/**",
     "apps/web/.tiles/**",
+    // The roadmap is a standalone page opened from disk, with its own bundled libraries.
+    "docs/roadmap/**",
   ]),
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
