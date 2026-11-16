@@ -13,7 +13,8 @@ export interface PageMeta {
 
 export function pageMetadata({ locale, segments, title, description }: PageMeta): Metadata {
   const brand = t(locale, "appName");
-  const fullTitle = title === brand ? brand : `${title} · ${brand}`;
+  // A title that already names the brand ("Showroom | Darb") is not suffixed again.
+  const fullTitle = title.split(" | ").includes(brand) ? title : `${title} · ${brand}`;
   const url = href(locale, segments);
   // There is no Arabic share image yet; the Hebrew one carries the bilingual wordmark.
   const image = locale === "en" ? "/brand/og-en.jpg" : "/brand/og-he.jpg";

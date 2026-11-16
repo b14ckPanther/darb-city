@@ -34,9 +34,9 @@ async function inBatches<T, R>(items: T[], size: number, run: (item: T) => Promi
 }
 
 /**
- * Per locale: one sitemap of pages (the legal pages, places, place × sector, nationwide kinds) and
- * slices of real businesses (lib/sitemap-ids). Places, sectors and kinds without a published
- * business are left out.
+ * Per locale: one sitemap of pages (home, explore, the business and legal pages, places, place ×
+ * sector, place × sector × kind, nationwide kinds) and slices of real businesses (lib/sitemap-ids).
+ * Places, sectors and kinds without a published business are left out.
  */
 export default async function sitemap(props: {
   id: Promise<string>;
@@ -75,20 +75,32 @@ export default async function sitemap(props: {
   ]);
   const places = withBusinesses(livePlaces, counts);
   const index = indexTaxonomy(taxonomy);
-  const sectorsByPlace = new Map(
-    await inBatches(places, 8, async (p) => {
-      const totals = sectorTotals(index, (await getKindCounts(p.slug)) ?? {});
-      return [p.slug, taxonomy.sectors.filter((s) => (totals.get(s.slug) ?? 0) > 0)] as const;
-    }),
-  );
+  // Per place: its sectors with a business, and within each the kinds with one.
+  const byPlace = await inBatches(places, 8, async (p) => {
+    const counts = (await getKindCounts(p.slug)) ?? {};
+    const totals = sectorTotals(index, counts);
+    const sectors = taxonomy.sectors
+      .filter((s) => (totals.get(s.slug) ?? 0) > 0)
+      .map((s) => ({ sector: s, kinds: s.kinds.filter((k) => (counts[k.slug] ?? 0) > 0) }));
+    return { place: p, sectors };
+  });
   return [
     entry(paths.home()),
+    entry(paths.explore()),
+    entry(paths.forBusiness()),
+    entry(paths.showroom()),
+    entry(paths.pricing()),
+    entry(paths.join()),
+    entry(paths.contact()),
     entry(paths.accessibility()),
     entry(paths.terms()),
     entry(paths.privacy()),
     ...places.map((p) => entry(paths.place(p.slug))),
-    ...places.flatMap((p) =>
-      (sectorsByPlace.get(p.slug) ?? []).map((s) => entry(paths.sector(p.slug, s.slug))),
+    ...byPlace.flatMap(({ place, sectors }) =>
+      sectors.flatMap(({ sector, kinds }) => [
+        entry(paths.sector(place.slug, sector.slug)),
+        ...kinds.map((k) => entry(paths.kind(place.slug, sector.slug, k.slug))),
+      ]),
     ),
     ...[...kinds.values()]
       .filter((k) => (nationalCounts?.[k.kind] ?? 0) > 0)

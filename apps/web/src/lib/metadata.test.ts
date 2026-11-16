@@ -25,3 +25,14 @@ it("uses the English share image for English and no suffix for the brand itself"
   expect(meta.title).toBe("Darb");
   expect(JSON.stringify(meta.openGraph)).toContain("/brand/og-en.jpg");
 });
+
+it("does not repeat the brand when the title already names it", () => {
+  const meta = pageMetadata({
+    locale: "he",
+    segments: [],
+    title: "דרב | דרך אחת לכל עסק",
+    description: "d",
+  });
+  expect(meta.title).toBe("דרב | דרך אחת לכל עסק");
+  expect(meta.openGraph?.title).toBe("דרב | דרך אחת לכל עסק");
+});
