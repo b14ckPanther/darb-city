@@ -17136,6 +17136,29 @@
           }
         }
       }
+    },
+    "אין עדיין הטבה פעילה. יוצרים הטבה בניהול, ואז מחתימים כאן.": {
+      "extractionState": "manual",
+      "localizations": {
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אין עדיין הטבה פעילה. יוצרים הטבה בניהול, ואז מחתימים כאן."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ما في عرض فعّال لسا. اعملوا عرض بالإدارة، وبعدين اختموا هون."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No active offer yet. Create one in Management, then stamp here."
+          }
+        }
+      }
     }
   }
 }

@@ -146,7 +146,7 @@ struct MenuSheet: View {
             }
             if Account.available {
                 Section(L("צוות")) {
-                    if account.isAdmin || !account.stampsFor.isEmpty {
+                    if account.step == .signedIn {
                         link(.stamp, "qrcode.viewfinder", Color(hex: 0x3DDC97), L("החתמת כרטיס"), L("סריקה במצלמה, החתמה בנגיעה"))
                     }
                     if account.isAdmin {
