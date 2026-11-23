@@ -13,16 +13,16 @@ export class ClerkTokenVerifier implements TokenVerifier {
     const key = this.auth.clerkJwtKey
       ? { jwtKey: this.auth.clerkJwtKey }
       : { secretKey: this.auth.clerkSecretKey ?? "" };
-    const parties = this.auth.authorizedParties.length
-      ? { authorizedParties: this.auth.authorizedParties }
-      : {};
     try {
-      const claims = (await this.verifyImpl(token, { ...key, ...parties })) as Record<
-        string,
-        unknown
-      >;
+      const claims = (await this.verifyImpl(token, key)) as Record<string, unknown>;
       const sub = typeof claims["sub"] === "string" ? claims["sub"] : "";
       if (!sub) throw new Error("no subject");
+      // azp is the browser origin the session token was minted for. A token from a browser must name
+      // one of ours; the native iPhone app sends no origin, so its tokens carry no azp at all.
+      const azp = claims["azp"];
+      const parties = this.auth.authorizedParties;
+      if (azp !== undefined && parties.length && !parties.includes(String(azp)))
+        throw new Error("foreign origin");
       const email = typeof claims["email"] === "string" ? claims["email"].toLowerCase() : null;
       return { sub, email, emailVerified: claims["email_verified"] === true };
     } catch {
