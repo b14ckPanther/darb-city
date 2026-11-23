@@ -147,7 +147,7 @@ struct StampView: View {
         case .tooSoon: L("הכרטיס כבר הוחתם לפני זמן קצר")
         case .rewardReady: L("קודם לתת את ההטבה")
         case .notReady: L("עוד אין מספיק החתמות")
-        case .gone, .offline: L("אין חיבור. נסו שוב.")
+        case .gone, .offline, .unavailable: L("אין חיבור. נסו שוב.")
         }
     }
 }

@@ -615,11 +615,28 @@ model LoyaltyOffer {
  * secret only the visitor's phone keeps, which reads the card.
  */
 model LoyaltyCard {
-  id         String         @id @default(uuid(7)) @db.Uuid
-  code       String         @unique
-  secretHash String         @unique
-  createdAt  DateTime       @default(now())
-  events     LoyaltyEvent[]
+  id            String               @id @default(uuid(7)) @db.Uuid
+  code          String               @unique
+  secretHash    String               @unique
+  createdAt     DateTime             @default(now())
+  /// When what the card shows last changed (a stamp, a reward, an offer): Apple Wallet asks for passes newer than this.
+  updatedAt     DateTime             @default(now())
+  events        LoyaltyEvent[]
+  registrations WalletRegistration[]
+}
+
+/// An iPhone holding this card in Apple Wallet, and the token that wakes it when the card changes.
+model WalletRegistration {
+  id        String      @id @default(uuid(7)) @db.Uuid
+  /// Apple's deviceLibraryIdentifier: one per phone and Wallet, not a person.
+  deviceId  String
+  pushToken String
+  cardId    String      @db.Uuid
+  card      LoyaltyCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  createdAt DateTime    @default(now())
+
+  @@unique([deviceId, cardId])
+  @@index([cardId])
 }
 
 /**

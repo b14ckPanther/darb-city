@@ -32,37 +32,43 @@ func pick(_ t: [String: String]) -> String {
 
 enum LoyaltyAPI {
     enum Failure: Error, Equatable {
-        case notACard, notStaff, tooSoon(next: Date?), rewardReady, notReady, gone, offline
+        case notACard, notStaff, tooSoon(next: Date?), rewardReady, notReady, gone, offline, unavailable
     }
 
     private static let decoder = JSONDecoder()
 
     // MARK: the visitor's own card
 
-    /// The card on this phone: made once, its secret kept in the Keychain, read with that secret.
-    static func myCard() async throws -> LoyaltyCard {
-        let secret: String
-        if let kept = CardKeychain.secret {
-            secret = kept
-        } else {
-            var req = URLRequest(url: DarbAPI.base.appendingPathComponent("loyalty/cards"), timeoutInterval: 20)
-            req.httpMethod = "POST"
-            req.setValue("application/json", forHTTPHeaderField: "content-type")
-            req.httpBody = Data("{}".utf8)
-            let (data, res) = try await URLSession.shared.data(for: req)
-            guard (res as? HTTPURLResponse)?.statusCode == 201,
-                  let made = try? decoder.decode([String: String].self, from: data), let s = made["secret"] else { throw Failure.offline }
-            CardKeychain.secret = s
-            secret = s
-        }
-        var req = URLRequest(url: DarbAPI.base.appendingPathComponent("loyalty/cards/me"), timeoutInterval: 20)
-        req.setValue(secret, forHTTPHeaderField: "x-darb-card")
-        req.cachePolicy = .reloadIgnoringLocalCacheData
+    /// The card's secret on this phone: the card is made the first time it is needed, and its secret kept.
+    private static func secret() async throws -> String {
+        if let kept = CardKeychain.secret { return kept }
+        var req = URLRequest(url: DarbAPI.base.appendingPathComponent("loyalty/cards"), timeoutInterval: 20)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "content-type")
+        req.httpBody = Data("{}".utf8)
         let (data, res) = try await URLSession.shared.data(for: req)
-        let status = (res as? HTTPURLResponse)?.statusCode ?? 0
-        if status == 404 { CardKeychain.secret = nil; throw Failure.gone }
-        guard status == 200 else { throw Failure.offline }
-        return try decoder.decode(LoyaltyCard.self, from: data)
+        guard (res as? HTTPURLResponse)?.statusCode == 201,
+              let made = try? decoder.decode([String: String].self, from: data), let s = made["secret"] else { throw Failure.offline }
+        CardKeychain.secret = s
+        return s
+    }
+
+    /// The card as an Apple Wallet pass, signed by Darb's server.
+    static func walletPass() async throws -> Data {
+        for attempt in 0..<2 {
+            var req = URLRequest(url: DarbAPI.base.appendingPathComponent("loyalty/cards/me/pass"), timeoutInterval: 30)
+            req.setValue(try await secret(), forHTTPHeaderField: "x-darb-card")
+            req.cachePolicy = .reloadIgnoringLocalCacheData
+            let (data, res) = try await URLSession.shared.data(for: req)
+            switch (res as? HTTPURLResponse)?.statusCode ?? 0 {
+            case 200: return data
+            case 503: throw Failure.unavailable
+            // the card is gone from the server: forget it and make a new one, once
+            case 404 where attempt == 0: CardKeychain.secret = nil
+            default: throw Failure.offline
+            }
+        }
+        throw Failure.offline
     }
 
     /// What the card's QR holds: the counter's page for this card, which a phone's camera opens directly.

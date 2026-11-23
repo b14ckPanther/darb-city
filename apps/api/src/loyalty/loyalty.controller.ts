@@ -7,6 +7,7 @@ import { SignedInGuard, type HelperRequest } from "../auth/helper.guard.js";
 import { APP_CONFIG, type AppConfig } from "../config.js";
 import { clientIp, type ClientRequest } from "../search/client-ip.js";
 import { RateLimiter } from "../search/rate-limiter.js";
+import { WalletService } from "../wallet/wallet.service.js";
 import { LoyaltyService, type Outcome, type StaffActor } from "./loyalty.service.js";
 
 type Res = { res?: { setHeader(k: string, v: string): void } };
@@ -59,7 +60,10 @@ export class LoyaltyCardsController {
 @Controller()
 @UseGuards(SignedInGuard)
 export class LoyaltyStaffController {
-  constructor(private readonly loyalty: LoyaltyService) {}
+  constructor(
+    private readonly loyalty: LoyaltyService,
+    private readonly wallet: WalletService,
+  ) {}
 
   @TsRestHandler(contract.loyalty.staff)
   handler(@Req() req: HelperRequest & Res) {
@@ -70,12 +74,28 @@ export class LoyaltyStaffController {
       card: async ({ params }) =>
         answer(await this.loyalty.cardForStaff(actor, params.code, new Date())) as never,
       stamp: async ({ body }) =>
-        answer(await this.loyalty.stamp(actor, body.code, body.offerId, new Date())) as never,
+        answer(
+          this.changed(
+            body.code,
+            await this.loyalty.stamp(actor, body.code, body.offerId, new Date()),
+          ),
+        ) as never,
       redeem: async ({ body }) =>
-        answer(await this.loyalty.redeem(actor, body.code, body.offerId, new Date())) as never,
+        answer(
+          this.changed(
+            body.code,
+            await this.loyalty.redeem(actor, body.code, body.offerId, new Date()),
+          ),
+        ) as never,
       join: async ({ body }) =>
         answer(await this.loyalty.join(actor.userId, body.token, new Date())) as never,
     });
+  }
+
+  /** A stamp or a reward landed: the card in Wallet updates itself. */
+  private changed<T>(code: string, o: Outcome<T>): Outcome<T> {
+    if (o.ok) this.wallet.cardChanged(code);
+    return o;
   }
 }
 
@@ -83,7 +103,10 @@ export class LoyaltyStaffController {
 @Controller()
 @UseGuards(AdminGuard)
 export class LoyaltyAdminController {
-  constructor(private readonly loyalty: LoyaltyService) {}
+  constructor(
+    private readonly loyalty: LoyaltyService,
+    private readonly wallet: WalletService,
+  ) {}
 
   @TsRestHandler(contract.loyalty.admin)
   handler(@Req() req: Res) {
@@ -92,12 +115,14 @@ export class LoyaltyAdminController {
       offers: async () => ({ status: 200, body: await this.loyalty.allOffers() }),
       create: async ({ body }) => {
         const offer = await this.loyalty.createOffer(body);
+        if (offer) this.wallet.offersChanged();
         return offer
           ? { status: 201, body: offer }
           : { status: 404, body: { message: "No such business" } };
       },
       update: async ({ params, body }) => {
         const offer = await this.loyalty.updateOffer(params.id, body);
+        if (offer) this.wallet.offersChanged();
         return offer
           ? { status: 200, body: offer }
           : { status: 404, body: { message: "No such offer" } };

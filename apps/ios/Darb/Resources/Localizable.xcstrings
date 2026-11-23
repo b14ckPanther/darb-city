@@ -17067,6 +17067,75 @@
           }
         }
       }
+    },
+    "בארנק. החותמות מתעדכנות שם לבד.": {
+      "extractionState": "manual",
+      "localizations": {
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בארנק. החותמות מתעדכנות שם לבד."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بالمحفظة. الأختام بتتحدّث هناك لحالها."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Wallet. Stamps update there by themselves."
+          }
+        }
+      }
+    },
+    "חותמות והטבות אצל העסקים השותפים, ב‑Apple Wallet": {
+      "extractionState": "manual",
+      "localizations": {
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "חותמות והטבות אצל העסקים השותפים, ב‑Apple Wallet"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "أختام وهدايا عند المصالح الشريكة، بـ Apple Wallet"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stamps and rewards at partner businesses, in Apple Wallet"
+          }
+        }
+      }
+    },
+    "הכרטיס לארנק עוד לא זמין. נסו שוב בקרוב.": {
+      "extractionState": "manual",
+      "localizations": {
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הכרטיס לארנק עוד לא זמין. נסו שוב בקרוב."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بطاقة المحفظة لسا مش جاهزة. جرّبوا كمان شوي."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The Wallet card isn't ready yet. Try again soon."
+          }
+        }
+      }
     }
   }
 }

@@ -99,6 +99,26 @@ export class LoyaltyService {
     return { code: card.code, standings: await this.standings(card.id, offers, now) };
   }
 
+  /** A card by its code, as Wallet asks for it: every active offer, and when what it shows last changed. */
+  async cardByCode(
+    code: string,
+    now: Date,
+  ): Promise<(LoyaltyCardDto & { id: string; updatedAt: Date }) | null> {
+    const card = await this.prisma.loyaltyCard.findUnique({ where: { code } });
+    if (!card) return null;
+    const offers = await this.prisma.loyaltyOffer.findMany({
+      where: { active: true },
+      select: offerSelect,
+      orderBy: { createdAt: "asc" },
+    });
+    return {
+      id: card.id,
+      code: card.code,
+      updatedAt: card.updatedAt,
+      standings: await this.standings(card.id, offers, now),
+    };
+  }
+
   /** The offers this person may stamp for: their businesses' active offers, or every active one for an admin. */
   async staffOffers(actor: StaffActor): Promise<LoyaltyOfferDto[]> {
     const rows = await this.prisma.loyaltyOffer.findMany({
