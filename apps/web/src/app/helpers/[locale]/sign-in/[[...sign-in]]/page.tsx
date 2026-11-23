@@ -11,16 +11,24 @@ export default async function HelperSignInPage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ email?: string | string[] }>;
+  searchParams: Promise<{ email?: string | string[]; next?: string | string[] }>;
 }) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
-  const { email } = await searchParams;
+  const { email, next } = await searchParams;
+  // back to the card or invite that sent them here; nothing outside the stamp pages
+  const stamp = helperHref(locale, "/stamp");
+  const target =
+    typeof next === "string" &&
+    (next === stamp || next.startsWith(`${stamp}/`)) &&
+    /^[\w/-]+$/.test(next)
+      ? next
+      : helperHref(locale);
   return (
     <HelperAuth locale={locale} title="signInTitle">
       <ClerkSignIn
         locale={locale}
-        target={helperHref(locale)}
+        target={target}
         other={helperHref(locale, "/sign-up")}
         initialEmail={typeof email === "string" ? email : ""}
         signedIn={await hasClerkSession()}
