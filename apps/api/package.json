@@ -37,6 +37,7 @@
     "bullmq": "catalog:",
     "dotenv": "catalog:",
     "ioredis": "catalog:",
+    "node-forge": "catalog:",
     "reflect-metadata": "catalog:",
     "rxjs": "catalog:",
     "sharp": "catalog:",
@@ -44,6 +45,7 @@
   },
   "devDependencies": {
     "@nestjs/testing": "catalog:",
+    "@types/node-forge": "catalog:",
     "@swc/core": "catalog:",
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
