@@ -35,7 +35,8 @@ const VIEW_KEY: Record<View, AdminKey> = {
 const SHOWN = 120;
 
 /** How many of the nine needs have at least one real, published place. */
-const covered = (r: CoverageRowDto) => COVERAGE_NEEDS.filter((n) => (r.needs[n.key] ?? 0) > 0).length;
+const covered = (r: CoverageRowDto) =>
+  COVERAGE_NEEDS.filter((n) => (r.needs[n.key] ?? 0) > 0).length;
 
 /** Town by town: which of the nine everyday needs already have a real place, the biggest towns first. */
 export default async function CoveragePage({
@@ -62,7 +63,9 @@ export default async function CoveragePage({
   const counts = Object.fromEntries(VIEWS.map((v) => [v, rows.filter((r) => inView(r, v)).length]));
   const matches = rows
     .filter((r) => inView(r, view))
-    .filter((r) => !q || [r.slug, ...Object.values(r.name)].some((s) => s.toLowerCase().includes(q)));
+    .filter(
+      (r) => !q || [r.slug, ...Object.values(r.name)].some((s) => s.toLowerCase().includes(q)),
+    );
   const shown = matches.slice(0, SHOWN);
   const done = rows.filter((r) => covered(r) === 9).length;
   return (
@@ -117,7 +120,9 @@ export default async function CoveragePage({
                   <Link href={adminHref(locale, `/places/${r.id}`)}>{name}</Link>
                   <span className={board.meta}>
                     {t(PLACE_TYPE_KEY[r.type])}
-                    {r.population ? ` · ${t("coveragePeople", { count: n.format(r.population) })}` : ""}
+                    {r.population
+                      ? ` · ${t("coveragePeople", { count: n.format(r.population) })}`
+                      : ""}
                     {` · ${t("coverageBusinesses", { count: n.format(r.businesses) })}`}
                     {" · "}
                     <span className={board.score}>{t("coverageScore", { done: c })}</span>
