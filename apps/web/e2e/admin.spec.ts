@@ -428,9 +428,10 @@ test.describe("admin redesign", () => {
     await page.locator("table tbody tr a").first().click();
     const bar = page.locator("[data-save-bar]");
     await expect(bar).toContainText("Everything is saved");
-    // Beside the form on wide screens; a tab away on phones.
+    // Beside the form on wide screens; a tab away on phones. Decided by the project, not by a look at the
+    // page, which can come before the card is drawn and send a desktop run to the phone's tab.
     const card = page.locator("[data-live-card]");
-    if (!(await card.isVisible())) {
+    if (test.info().project.name === "phone") {
       await page.locator("[data-preview-tab]").click();
       await expect(card).toBeVisible();
       await page.getByRole("button", { name: "Edit", exact: true }).click();
