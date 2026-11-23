@@ -23,19 +23,24 @@ it("verifies with Clerk's verifyToken and reads the email claims", async () => {
     email: "founder@darb.co.il",
     emailVerified: true,
   });
-  expect(verify).toHaveBeenCalledWith("t", {
-    secretKey: "sk_test_x",
-    authorizedParties: ["https://darb.co.il"],
-  });
+  expect(verify).toHaveBeenCalledWith("t", { secretKey: "sk_test_x" });
 });
 
 it("prefers the networkless JWT key", async () => {
   const verify = vi.fn(async () => ({ sub: "user_1" }));
   await new ClerkTokenVerifier({ ...auth, clerkJwtKey: "PEM" }, verify as never).verify("t");
-  expect(verify).toHaveBeenCalledWith("t", {
-    jwtKey: "PEM",
-    authorizedParties: ["https://darb.co.il"],
-  });
+  expect(verify).toHaveBeenCalledWith("t", { jwtKey: "PEM" });
+});
+
+it("accepts our web origins and the native app (no azp), rejects other origins", async () => {
+  const as = (azp?: string) =>
+    new ClerkTokenVerifier(auth, (async () => ({
+      sub: "user_1",
+      ...(azp ? { azp } : {}),
+    })) as never);
+  await expect(as("https://darb.co.il").verify("t")).resolves.toMatchObject({ sub: "user_1" });
+  await expect(as().verify("t")).resolves.toMatchObject({ sub: "user_1" });
+  await expect(as("https://evil.example").verify("t")).rejects.toBeInstanceOf(InvalidTokenError);
 });
 
 it("turns any verification failure into InvalidTokenError", async () => {
