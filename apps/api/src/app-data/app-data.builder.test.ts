@@ -78,6 +78,8 @@ describe("the app's map", () => {
           website: null,
           attributes: { osmId: "x" },
           links: { tiktok: "https://tiktok.com/@a", waze: "https://waze.com" },
+          logo: { key: "pending/logo.webp" },
+          photos: [{ key: "pending/front.webp", alt: {} }, { key: "../secret" }],
         },
         {
           slug: "garage",
@@ -94,6 +96,8 @@ describe("the app's map", () => {
           website: null,
           attributes: {},
           links: {},
+          logo: null,
+          photos: [],
         },
       ],
     });
@@ -107,10 +111,14 @@ describe("the app's map", () => {
     expect(data.businesses.demo[1 - firas]).toBe(1);
     expect(data.hours[data.businesses.hours[firas]!]).toEqual({ "0": [["09:00", "21:00"]] });
     expect(data.kinds[0]!.syn).toEqual({ he: [], ar: ["معرض"], en: [] });
+    expect(data.businesses.logo[firas]).toBe("https://media.darb.co.il/pending/logo.webp");
+    expect(data.businesses.cover[firas]).toBe("https://media.darb.co.il/pending/front.webp");
+    expect(data.businesses.logo[1 - firas]).toBe("");
     expect(data.details[String(data.businesses.id[firas])]).toEqual({
       phone: "0547227619",
       wa: "0547227619",
       links: { tiktok: "https://tiktok.com/@a" },
+      photos: ["https://media.darb.co.il/pending/front.webp"],
     });
   });
 });

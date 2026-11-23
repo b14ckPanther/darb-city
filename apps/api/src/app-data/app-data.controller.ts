@@ -107,6 +107,8 @@ export class AppDataController {
           website: true,
           attributes: true,
           links: true,
+          logo: true,
+          photos: true,
           place: { select: { slug: true } },
           primaryKind: { select: { slug: true } },
         },
