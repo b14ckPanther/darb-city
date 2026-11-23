@@ -1,0 +1,123 @@
+name: Darb
+options:
+  bundleIdPrefix: il.co.darb
+  developmentLanguage: he
+  deploymentTarget:
+    iOS: "18.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "0.2.0"
+    CURRENT_PROJECT_VERSION: "2"
+    DEVELOPMENT_TEAM: KHQ29Z6A7S
+    CODE_SIGN_STYLE: Automatic
+    TARGETED_DEVICE_FAMILY: "1"
+    ENABLE_PREVIEWS: YES
+    # the String Catalog carries Hebrew, Arabic and English
+    SWIFT_EMIT_LOC_STRINGS: NO
+    LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+targets:
+  Darb:
+    type: application
+    platform: iOS
+    sources:
+      - path: Darb
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: il.co.darb.app
+        PRODUCT_NAME: Darb
+        INFOPLIST_FILE: Darb/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Darb/Darb.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        SUPPORTS_MACCATALYST: NO
+    dependencies:
+      - target: DarbWidget
+  DarbWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: DarbWidget
+      # the widget reads the same data with the same rules as the app, in the language chosen in the app
+      - path: Darb/Data/Lang.swift
+      - path: Darb/Data/Models.swift
+      - path: Darb/Data/OpenHours.swift
+      - path: Darb/Data/Needs.swift
+      - path: Darb/Data/Nearest.swift
+      - path: Darb/Data/ArtResolver.swift
+      - path: Darb/Data/Promo.swift
+      - path: Darb/Data/DriveActivity.swift
+      - path: Darb/Design/Hex.swift
+      - path: Darb/Design/Type.swift
+      - path: Darb/Resources/Localizable.xcstrings
+      - path: Darb/Resources/Data/promo.json
+      - path: Darb/Resources/Data/needs.json
+      - path: Darb/Resources/Art
+      - path: Darb/Resources/Fonts
+    info:
+      path: DarbWidget/Info.plist
+      properties:
+        CFBundleDisplayName: דרב
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleLocalizations: [he, ar, en]
+        UIAppFonts:
+          - Heebo-Regular.ttf
+          - Heebo-Medium.ttf
+          - Heebo-SemiBold.ttf
+          - Heebo-Bold.ttf
+          - Heebo-ExtraBold.ttf
+          - Heebo-Black.ttf
+          - Cairo-Regular.ttf
+          - Cairo-Medium.ttf
+          - Cairo-SemiBold.ttf
+          - Cairo-Bold.ttf
+          - Cairo-ExtraBold.ttf
+          - Cairo-Black.ttf
+          - Ubuntu-Regular.ttf
+          - Ubuntu-Medium.ttf
+          - Ubuntu-Bold.ttf
+          - Karantina-Bold.ttf
+          - Lalezar-Regular.ttf
+          - DSEG7Classic-Bold.ttf
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: il.co.darb.app.widget
+        PRODUCT_NAME: DarbWidget
+        CODE_SIGN_ENTITLEMENTS: DarbWidget/DarbWidget.entitlements
+        SKIP_INSTALL: YES
+  DarbTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: DarbTests
+    dependencies:
+      - target: Darb
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: il.co.darb.app.tests
+  DarbUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: DarbUITests
+    dependencies:
+      - target: Darb
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: il.co.darb.app.uitests
+        TEST_TARGET_NAME: Darb
+schemes:
+  Darb:
+    build:
+      targets:
+        Darb: all
+        DarbTests: [test]
+    test:
+      targets:
+        - DarbTests
+        - DarbUITests
