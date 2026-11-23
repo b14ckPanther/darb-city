@@ -68,18 +68,45 @@ export class AppDataController {
 
   private async build(): Promise<Built> {
     const [sectors, kinds, places, businesses] = await Promise.all([
-      this.prisma.sector.findMany({ select: { slug: true, name: true, accent: true }, orderBy: [{ order: "asc" }, { slug: "asc" }] }),
+      this.prisma.sector.findMany({
+        select: { slug: true, name: true, accent: true },
+        orderBy: [{ order: "asc" }, { slug: "asc" }],
+      }),
       this.prisma.kind.findMany({
         where: { status: "active" },
         select: { slug: true, name: true, synonyms: true, sector: { select: { slug: true } } },
         orderBy: [{ order: "asc" }, { slug: "asc" }],
       }),
-      this.prisma.place.findMany({ select: { slug: true, name: true, aliases: true, lat: true, lng: true, type: true, status: true } }),
-      this.prisma.business.findMany({
-        where: { status: "published", tier: { not: "example" }, primaryKind: { is: { status: "active" } } },
+      this.prisma.place.findMany({
         select: {
-          slug: true, name: true, tagline: true, lat: true, lng: true, hours: true, address: true,
-          phone: true, whatsapp: true, website: true, attributes: true, links: true,
+          slug: true,
+          name: true,
+          aliases: true,
+          lat: true,
+          lng: true,
+          type: true,
+          status: true,
+        },
+      }),
+      this.prisma.business.findMany({
+        where: {
+          status: "published",
+          tier: { not: "example" },
+          primaryKind: { is: { status: "active" } },
+        },
+        select: {
+          slug: true,
+          name: true,
+          tagline: true,
+          lat: true,
+          lng: true,
+          hours: true,
+          address: true,
+          phone: true,
+          whatsapp: true,
+          website: true,
+          attributes: true,
+          links: true,
           place: { select: { slug: true } },
           primaryKind: { select: { slug: true } },
         },
@@ -87,7 +114,12 @@ export class AppDataController {
     ]);
     const payload = buildAppData({
       sectors,
-      kinds: kinds.map((k) => ({ slug: k.slug, sector: k.sector.slug, name: k.name, synonyms: k.synonyms })),
+      kinds: kinds.map((k) => ({
+        slug: k.slug,
+        sector: k.sector.slug,
+        name: k.name,
+        synonyms: k.synonyms,
+      })),
       places,
       businesses: businesses.map((b) => ({ ...b, place: b.place.slug, kind: b.primaryKind.slug })),
       generated: new Date(),

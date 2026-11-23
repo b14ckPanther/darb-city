@@ -45,13 +45,42 @@ const BANNED = new RegExp(
 );
 
 /** The attributes and links the app shows. */
-const ATTRIBUTES = new Set(["bankCode", "branchCode", "fuelAdminNo", "motGarageType", "motGarageId", "eduSymbol",
-  "delivers", "takeaway", "wheelchair", "outdoorSeating", "vegan", "vegetarian"]);
+const ATTRIBUTES = new Set([
+  "bankCode",
+  "branchCode",
+  "fuelAdminNo",
+  "motGarageType",
+  "motGarageId",
+  "eduSymbol",
+  "delivers",
+  "takeaway",
+  "wheelchair",
+  "outdoorSeating",
+  "vegan",
+  "vegetarian",
+]);
 const LINKS = new Set(["instagram", "facebook", "tiktok"]);
 
-export interface SectorRow { slug: string; name: unknown; accent: string }
-export interface KindRow { slug: string; sector: string; name: unknown; synonyms: unknown }
-export interface PlaceRow { slug: string; name: unknown; aliases: string[]; lat: number; lng: number; type: string; status: string }
+export interface SectorRow {
+  slug: string;
+  name: unknown;
+  accent: string;
+}
+export interface KindRow {
+  slug: string;
+  sector: string;
+  name: unknown;
+  synonyms: unknown;
+}
+export interface PlaceRow {
+  slug: string;
+  name: unknown;
+  aliases: string[];
+  lat: number;
+  lng: number;
+  type: string;
+  status: string;
+}
 export interface BusinessRow {
   slug: string;
   place: string;
@@ -74,7 +103,11 @@ export function tri(value: unknown): Tri {
   const v = (value && typeof value === "object" ? value : {}) as Partial<Record<Lang, unknown>>;
   const s = (x: unknown) => (typeof x === "string" ? x : "");
   const base = s(v.he) || s(v.ar) || s(v.en);
-  return { he: (s(v.he) || base).trim(), ar: (s(v.ar) || base).trim(), en: (s(v.en) || base).trim() };
+  return {
+    he: (s(v.he) || base).trim(),
+    ar: (s(v.ar) || base).trim(),
+    en: (s(v.en) || base).trim(),
+  };
 }
 
 /** No dashes in copy: a dash between two words becomes a space, between two times it stays. */
@@ -84,12 +117,17 @@ export function clean(text: string): string {
 
 /** The week as {"0": [["08:00", "17:00"]]}; null when there are no hours. */
 export function week(hours: unknown): Record<string, [string, string][]> | null {
-  const weekly = ((hours && typeof hours === "object" ? (hours as { weekly?: unknown }).weekly : null) ?? {}) as Record<string, unknown>;
+  const weekly = ((hours && typeof hours === "object"
+    ? (hours as { weekly?: unknown }).weekly
+    : null) ?? {}) as Record<string, unknown>;
   const out: Record<string, [string, string][]> = {};
   for (const [day, spans] of Object.entries(weekly)) {
     if (!Array.isArray(spans)) continue;
     const pairs = spans
-      .filter((s): s is { open: string; close: string } => !!s && typeof s.open === "string" && typeof s.close === "string" && !!s.open && !!s.close)
+      .filter(
+        (s): s is { open: string; close: string } =>
+          !!s && typeof s.open === "string" && typeof s.close === "string" && !!s.open && !!s.close,
+      )
       .map((s) => [s.open, s.close] as [string, string]);
     if (pairs.length) out[String(Number(day))] = pairs;
   }
@@ -115,7 +153,11 @@ export function businessId(place: string, slug: string, taken: Set<number>): num
 
 /** JSON with its keys sorted, as the hours table is keyed. */
 function stable(value: Record<string, [string, string][]>): string {
-  return JSON.stringify(Object.keys(value).sort().map((k) => [k, value[k]]));
+  return JSON.stringify(
+    Object.keys(value)
+      .sort()
+      .map((k) => [k, value[k]]),
+  );
 }
 
 export function buildAppData(input: {
@@ -130,11 +172,24 @@ export function buildAppData(input: {
   const placeOf = new Map(input.places.map((p) => [p.slug, p]));
   const listings = input.businesses
     .filter((b) => kindSector.has(b.kind) && placeOf.has(b.place))
-    .sort((a, b) => (a.place === b.place ? (a.slug < b.slug ? -1 : a.slug > b.slug ? 1 : 0) : a.place < b.place ? -1 : 1));
+    .sort((a, b) =>
+      a.place === b.place
+        ? a.slug < b.slug
+          ? -1
+          : a.slug > b.slug
+            ? 1
+            : 0
+        : a.place < b.place
+          ? -1
+          : 1,
+    );
   const used = new Set(listings.map((b) => b.place));
   // every town the app can stand in: the live ones, and any that has a business
   const places = input.places
-    .filter((p) => p.type !== "country" && p.type !== "region" && (p.status === "live" || used.has(p.slug)))
+    .filter(
+      (p) =>
+        p.type !== "country" && p.type !== "region" && (p.status === "live" || used.has(p.slug)),
+    )
     .sort((a, b) => (a.slug < b.slug ? -1 : a.slug > b.slug ? 1 : 0));
   const placeIndex = new Map(places.map((p, i) => [p.slug, i]));
 
@@ -168,8 +223,14 @@ export function buildAppData(input: {
   };
 
   const cols = {
-    id: [] as number[], kind: [] as number[], place: [] as number[], lat: [] as number[], lng: [] as number[],
-    hours: [] as number[], demo: [] as number[], tag: [] as number[],
+    id: [] as number[],
+    kind: [] as number[],
+    place: [] as number[],
+    lat: [] as number[],
+    lng: [] as number[],
+    hours: [] as number[],
+    demo: [] as number[],
+    tag: [] as number[],
     name: { he: [] as string[], ar: [] as string[], en: [] as string[] },
   };
   const details: Record<string, Record<string, unknown>> = {};
@@ -196,15 +257,27 @@ export function buildAppData(input: {
     if (b.website) d.web = b.website;
     const address = tri(b.address);
     const town = tri(placeOf.get(b.place)!.name);
-    if (address.he && address.he !== town.he && !BANNED.test(LANGS.map((l) => address[l]).join(" "))) {
+    if (
+      address.he &&
+      address.he !== town.he &&
+      !BANNED.test(LANGS.map((l) => address[l]).join(" "))
+    ) {
       // a street given only in Hebrew stays as it is written, in every language
-      d.addr = Object.fromEntries(LANGS.map((l) => [l, address[l] === town[l] ? address.he : address[l]]));
+      d.addr = Object.fromEntries(
+        LANGS.map((l) => [l, address[l] === town[l] ? address.he : address[l]]),
+      );
     }
     const attrs = Object.fromEntries(
-      Object.entries((b.attributes ?? {}) as Record<string, unknown>).filter(([k, v]) => ATTRIBUTES.has(k) && v !== null && v !== false && v !== ""),
+      Object.entries((b.attributes ?? {}) as Record<string, unknown>).filter(
+        ([k, v]) => ATTRIBUTES.has(k) && v !== null && v !== false && v !== "",
+      ),
     );
     if (Object.keys(attrs).length) d.attr = attrs;
-    const links = Object.fromEntries(Object.entries((b.links ?? {}) as Record<string, unknown>).filter(([k, v]) => LINKS.has(k) && !!v));
+    const links = Object.fromEntries(
+      Object.entries((b.links ?? {}) as Record<string, unknown>).filter(
+        ([k, v]) => LINKS.has(k) && !!v,
+      ),
+    );
     if (Object.keys(links).length) d.links = links;
     if (Object.keys(d).length) details[String(id)] = d;
   }
@@ -219,8 +292,20 @@ export function buildAppData(input: {
     generated: input.generated.toISOString().slice(0, 10),
     home: DEFAULT_PLACE,
     sectors: input.sectors.map((s) => ({ slug: s.slug, name: tri(s.name), accent: s.accent })),
-    kinds: input.kinds.map((k) => ({ slug: k.slug, sector: k.sector, name: tri(k.name), syn: synonyms(k.synonyms) })),
-    places: places.map((p) => ({ slug: p.slug, name: tri(p.name), aliases: p.aliases ?? [], lat: round5(p.lat), lng: round5(p.lng), type: p.type })),
+    kinds: input.kinds.map((k) => ({
+      slug: k.slug,
+      sector: k.sector,
+      name: tri(k.name),
+      syn: synonyms(k.synonyms),
+    })),
+    places: places.map((p) => ({
+      slug: p.slug,
+      name: tri(p.name),
+      aliases: p.aliases ?? [],
+      lat: round5(p.lat),
+      lng: round5(p.lng),
+      type: p.type,
+    })),
     hours: hoursTable,
     tags,
     businesses: cols,
