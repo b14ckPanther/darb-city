@@ -40,6 +40,7 @@ import {
 import { PricingSchema } from "./pricing.js";
 import { helpersContract } from "./helpers.js";
 
+import { loyaltyContract } from "./loyalty.js";
 const c = initContract();
 
 /**
@@ -232,4 +233,5 @@ export const contract = c.router({
   },
   admin: adminContract,
   helpers: helpersContract,
+  loyalty: loyaltyContract,
 });
