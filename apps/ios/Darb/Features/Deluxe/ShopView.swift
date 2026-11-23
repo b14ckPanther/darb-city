@@ -64,8 +64,10 @@ struct ShopView: View {
                 ZStack(alignment: .bottom) {
                     Color.black.opacity(0.45).ignoresSafeArea()
                         .onTapGesture { withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) { focus = nil } }
-                    ItemSheet(item: item, ink: ink, bg: surface, accent: accent, ui: ui, ns: dishNS,
-                              close: { withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) { focus = nil } }) { size in add(item, size: size) }
+                    ItemSheet(item: item, ink: ink, bg: surface, accent: accent, ui: ui, ns: dishNS, system: source.system,
+                              close: { withAnimation(.spring(response: 0.35, dampingFraction: 0.9)) { focus = nil } }) { size in
+                        if source.orders { add(item, size: size) } else { ask(item) }
+                    }
                         .padding(.horizontal, 12).padding(.bottom, 10)
                         .transition(.asymmetric(insertion: .identity, removal: .opacity))
                 }
@@ -250,11 +252,13 @@ struct ShopView: View {
     /// The categories as round buttons: a photo of the tray, or, for hair types, the strand itself, curled as much
     /// as that hair curls.
     private func categories(_ shop: Shop) -> some View {
-        // five fit across the screen when drawn a little smaller
-        let compact = shop.categories.count == 5
-        let circle: CGFloat = compact ? 60 : 70
+        // up to six fit across the screen, drawn smaller the more there are
+        let n = shop.categories.count
+        let compact = n >= 5
+        let circle: CGFloat = n >= 6 ? 52 : n == 5 ? 60 : 70
+        let cell: CGFloat = n >= 6 ? 58 : n == 5 ? 68 : 82
         return ScrollView(.horizontal) {
-            HStack(spacing: compact ? 6 : 14) {
+            HStack(spacing: n >= 6 ? 2 : compact ? 6 : 14) {
                 ForEach(shop.categories) { c in
                     let on = c.id == category
                     Button { withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { category = c.id }; Haptic.tap() } label: {
@@ -262,6 +266,11 @@ struct ShopView: View {
                             Group {
                                 if let image = c.image {
                                     KeptImage(url: image, fill: surface) { $0.resizable().scaledToFill() }
+                                } else if source.system == .lot {
+                                    Image(systemName: Self.bodySymbol(c.id)).font(.symbol(size: circle * 0.36))
+                                        .foregroundStyle(on ? accent : ink)
+                                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                        .background(surface)
                                 } else {
                                     Strands(curls: c.curl.map { [$0, $0, $0] } ?? [0.08, 0.5, 0.95], ink: on ? accent : ink)
                                         .padding(circle * 0.22)
@@ -274,12 +283,12 @@ struct ShopView: View {
                             Text(c.name).font(.darb(.caption, on ? .heavy : .semibold)).lineLimit(1)
                                 .foregroundStyle(on ? accent : ink.opacity(0.8))
                         }
-                        .frame(width: compact ? 68 : 82)
+                        .frame(width: cell)
                     }
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, n >= 6 ? 10 : 16)
             .containerRelativeFrame(.horizontal, alignment: .center) { w, _ in w }
         }
         .scrollIndicators(.hidden)
@@ -288,7 +297,9 @@ struct ShopView: View {
 
     /// The category's dishes or products, two by two.
     private func counter(_ shop: Shop) -> some View {
-        let items = shop.items.filter { category.map($0.categories.contains) ?? true }
+        // what can be had first; anything sold or sold out goes to the bottom, in its own order
+        let all = shop.items.filter { category.map($0.categories.contains) ?? true }
+        let items = all.filter(\.available) + all.filter { !$0.available }
         return VStack(alignment: .leading, spacing: 12) {
             if let c = shop.categories.first(where: { $0.id == category }) {
                 HStack(alignment: .firstTextBaseline) {
@@ -301,7 +312,7 @@ struct ShopView: View {
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
                 ForEach(items) { it in
                     Button { withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) { focus = it } } label: {
-                        DishCard(item: it, ink: ink, surface: surface, accent: accent, ui: ui, ns: dishNS, hidden: focus?.id == it.id)
+                        DishCard(item: it, ink: ink, surface: surface, accent: accent, ui: ui, ns: dishNS, system: source.system, hidden: focus?.id == it.id)
                     }
                     .buttonStyle(PressStyle(scale: 0.96))
                 }
@@ -394,6 +405,13 @@ struct ShopView: View {
         drop = (item, UUID())
     }
 
+    /// A lot is asked about one car at a time: the question goes on WhatsApp in the lot's own words.
+    private func ask(_ item: Shop.Item) {
+        var c = URLComponents(string: "https://wa.me/" + Outside.waDigits(source.whatsapp))
+        c?.queryItems = [URLQueryItem(name: "text", value: item.ask ?? item.name)]
+        if let url = c?.url { Analytics.log(.order, business.id); Haptic.done(); openURL(url) }
+    }
+
     private func send() {
         let lines = bag.map { l -> String in
             let size = l.size.map { [" S", " M", " L"][$0] } ?? ""
@@ -401,9 +419,22 @@ struct ShopView: View {
         }
         let total = bag.reduce(0) { $0 + $1.price * Double($1.qty) }
         let text = L("היי, הזמנה דרך דרב:", in: ui) + "\n" + lines.joined(separator: "\n") + "\n" + L("סה״כ %@", in: ui, Self.money(total))
-        var c = URLComponents(string: "https://wa.me/" + source.whatsapp)
+        var c = URLComponents(string: "https://wa.me/" + Outside.waDigits(source.whatsapp))
         c?.queryItems = [URLQueryItem(name: "text", value: text)]
         if let url = c?.url { Analytics.log(.order, business.id); openURL(url) }
+    }
+
+    /// A car's body as a symbol, for the lot's categories.
+    static func bodySymbol(_ id: String) -> String {
+        switch id {
+        case "*": "car.2.fill"
+        case "suv", "crossover": "suv.side.fill"
+        case "pickup": "truck.pickup.side.fill"
+        case "van", "commercial", "mpv": "bus.fill"
+        case "sold": "checkmark.seal.fill"
+        case "convertible", "coupe": "car.rear.fill"
+        default: "car.side.fill"
+        }
     }
 
     static func money(_ v: Double) -> String { "₪" + (v.rounded() == v ? String(Int(v)) : String(format: "%.2f", v)) }
@@ -467,6 +498,7 @@ private struct DishCard: View {
     let ink: Color, surface: Color, accent: Color
     let ui: Lang
     let ns: Namespace.ID
+    var system: ShopSource.System = .kitchen
     var hidden = false
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -478,7 +510,7 @@ private struct DishCard: View {
                 .saturation(item.available ? 1 : 0)
                 .overlay(alignment: .topLeading) {
                     if !item.available {
-                        Text(L("נגמר", in: ui)).font(.darb(.caption, .black)).foregroundStyle(surface)
+                        Text(system == .lot ? L("נמכר", in: ui) : L("נגמר", in: ui)).font(.darb(.caption, .black)).foregroundStyle(surface)
                             .padding(.horizontal, 9).padding(.vertical, 3).background(ink, in: Capsule()).padding(8)
                     } else if let b = item.badge, !b.isEmpty {
                         Text(b).font(.darb(.caption2, .black)).foregroundStyle(surface)
@@ -488,11 +520,14 @@ private struct DishCard: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.name).font(.darb(.subheadline, .heavy)).lineLimit(2).multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, minHeight: 36, alignment: .topLeading)
+                if system == .lot, let facts = item.tags, !facts.isEmpty {
+                    Text(verbatim: facts.prefix(3).joined(separator: " · ")).font(.darb(.caption, .semibold)).opacity(0.65).lineLimit(1)
+                }
                 if let price = item.price {
                     Text(item.sizes != nil ? L("מ %@", in: ui, ShopView.money(price)) : ShopView.money(price))
                         .font(.darb(.headline, .black)).foregroundStyle(accent).monospacedDigit()
                 } else {
-                    Text(L("המחיר בקרוב", in: ui)).font(.darb(.subheadline, .bold)).foregroundStyle(ink.opacity(0.5))
+                    Text(system == .lot ? L("התקשרו למחיר", in: ui) : L("המחיר בקרוב", in: ui)).font(.darb(.subheadline, .bold)).foregroundStyle(ink.opacity(0.5))
                 }
             }
             .foregroundStyle(ink)
@@ -532,13 +567,26 @@ private struct ItemSheet: View {
     let ink: Color, bg: Color, accent: Color
     let ui: Lang
     let ns: Namespace.ID
+    var system: ShopSource.System = .kitchen
     let close: () -> Void
     let add: (Int?) -> Void
     @State private var size = 1
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Color.clear.aspectRatio(16.0 / 10.0, contentMode: .fit)
-                .overlay { ItemArt(item: item, fill: bg, pad: 16) }
+                .overlay {
+                    if let gallery = item.gallery {
+                        // every photo of the car, swiped
+                        TabView {
+                            ForEach(gallery, id: \.self) { url in
+                                KeptImage(url: url, fill: bg) { $0.resizable().scaledToFill() }.clipped()
+                            }
+                        }
+                        .tabViewStyle(.page(indexDisplayMode: .always))
+                    } else {
+                        ItemArt(item: item, fill: bg, pad: 16)
+                    }
+                }
                 .clipped()
                 .matchedGeometryEffect(id: "photo-\(item.id)", in: ns)
                 .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
@@ -592,13 +640,19 @@ private struct ItemSheet: View {
                     }
                 }
             }
-            let orderable = item.available && item.price != nil
+            let asks = system == .lot
+            let orderable = item.available && (asks || item.price != nil)
             Button { add(item.sizes == nil ? nil : size) } label: {
                 HStack {
-                    Image(systemName: orderable ? "bag.badge.plus" : item.available ? "clock" : "nosign").font(.symbol(.title3))
-                    Text(orderable ? L("להוסיף לסל", in: ui) : item.available ? L("המחיר בקרוב", in: ui) : L("נגמר כרגע", in: ui))
+                    Image(systemName: asks ? (orderable ? "message.fill" : "checkmark.seal.fill") : orderable ? "bag.badge.plus" : item.available ? "clock" : "nosign")
+                        .font(.symbol(.title3))
+                    Text(asks ? (orderable ? L("לשאול בוואטסאפ", in: ui) : L("נמכר", in: ui))
+                         : orderable ? L("להוסיף לסל", in: ui) : item.available ? L("המחיר בקרוב", in: ui) : L("נגמר כרגע", in: ui))
                         .font(.darb(.title3, .heavy))
                     Spacer()
+                    if asks, orderable, item.price == nil {
+                        Text(L("התקשרו למחיר", in: ui)).font(.darb(.caption, .bold)).opacity(0.75)
+                    }
                 }
                 .foregroundStyle(bg).padding(.horizontal, 22).frame(height: 58)
                 .background(orderable ? accent : ink.opacity(0.3), in: Capsule())
