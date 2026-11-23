@@ -66,14 +66,14 @@ app says so. The widget and Siri measure from the point the app last used.
 
 `scripts/export-data.py` writes the bundled data from `packages/seed/data`:
 
-| File | What | Read |
-| --- | --- | --- |
-| `darb.json` | every real business in the north (13,255), 212 kinds, 521 towns, in three languages, as columns | when the app opens |
-| `needs.json` | the same, for the nine everyday needs only | by the widget and Siri |
-| `details.json` | phone, WhatsApp, website, address, attributes, social links | off the main thread, after opening |
-| `screens.json` | the sample page of each kind, always labelled as a sample | with the details |
-| `promo.json` | the plans with features, prices and notes, the pricing page's copy, the paid placements (none yet), the profiles of Darb's real clients | when the app opens |
-| `legal.json` | terms and privacy, from `scripts/sync-copy.mjs` | when one is opened |
+| File           | What                                                                                                                                    | Read                               |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| `darb.json`    | every real business in the north (13,255), 212 kinds, 521 towns, in three languages, as columns                                         | when the app opens                 |
+| `needs.json`   | the same, for the nine everyday needs only                                                                                              | by the widget and Siri             |
+| `details.json` | phone, WhatsApp, website, address, attributes, social links                                                                             | off the main thread, after opening |
+| `screens.json` | the sample page of each kind, always labelled as a sample                                                                               | with the details                   |
+| `promo.json`   | the plans with features, prices and notes, the pricing page's copy, the paid placements (none yet), the profiles of Darb's real clients | when the app opens                 |
+| `legal.json`   | terms and privacy, from `scripts/sync-copy.mjs`                                                                                         | when one is opened                 |
 
 The showroom examples in `businesses.json` are made up, so they are never bundled. A business whose source gives no
 hours gets its sector's usual week and is marked `demo`; the app labels those as sample hours wherever it shows them.
@@ -94,25 +94,25 @@ form says so and offers the same message as a ready email.
 
 ## Launch arguments for testing
 
-| Argument | What it does |
-| --- | --- |
-| `-darbTime 20:30` | Fixes the clock |
-| `-darbLangOnce ar` | The language for this run (`he`, `ar`, `en`) |
-| `-darbAppearance dark` | The look for this run (`hour`, `light`, `dark`) |
-| `-darbLocation 32.919,35.295` | Stands the person at a point |
-| `-darbTownOnce nazareth` | Stands the app in a town for this run |
-| `-darbOnboard YES` | Shows the first run again (`-darbOnboardStep 1` starts on a later step); `-darbOnboarded YES` skips it |
-| `-darbSkipSplash YES` | Opens without the splash |
-| `-darbRoute need:fuel` | Opens a screen: `need:<key>`, `kind:<slug>`, `business:<id>` |
-| `-darbSheet search` | Opens a sheet or a page of the menu: `search`, `kinds`, `town`, `menu`, `settings`, `saved`, `plans`, `about`, `join`, `contact`, `terms`, `privacy`, `fonts`; `towns` on a place page |
-| `-darbQuery pizza` | Fills the search field |
-| `-darbTab hours` | Opens the place page on `hours` or `info` |
-| `-darbPick 3` | Turns the place page to the third place |
-| `-darbLead bank` | Sets the need the lead card answers |
-| `-darbAutoBack 2.2` | With `-darbRoute`: opens the screen after a moment and closes it again, for filming the transition |
-| `-darbAPI http://127.0.0.1:8787` | Points the forms at another server; `-darbFormFill YES` and `-darbFormSend YES` fill and send a test message there |
-| `-darbReset YES` | Forgets what the device remembers |
-| `-darbDemoMedia YES`, `-darbDemoProfile all`, `-darbDemoSponsor YES` | **Demo.** Placeholder pictures, paid pages and placements, each marked as a demo |
+| Argument                                                             | What it does                                                                                                                                                                           |
+| -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-darbTime 20:30`                                                    | Fixes the clock                                                                                                                                                                        |
+| `-darbLangOnce ar`                                                   | The language for this run (`he`, `ar`, `en`)                                                                                                                                           |
+| `-darbAppearance dark`                                               | The look for this run (`hour`, `light`, `dark`)                                                                                                                                        |
+| `-darbLocation 32.919,35.295`                                        | Stands the person at a point                                                                                                                                                           |
+| `-darbTownOnce nazareth`                                             | Stands the app in a town for this run                                                                                                                                                  |
+| `-darbOnboard YES`                                                   | Shows the first run again (`-darbOnboardStep 1` starts on a later step); `-darbOnboarded YES` skips it                                                                                 |
+| `-darbSkipSplash YES`                                                | Opens without the splash                                                                                                                                                               |
+| `-darbRoute need:fuel`                                               | Opens a screen: `need:<key>`, `kind:<slug>`, `business:<id>`                                                                                                                           |
+| `-darbSheet search`                                                  | Opens a sheet or a page of the menu: `search`, `kinds`, `town`, `menu`, `settings`, `saved`, `plans`, `about`, `join`, `contact`, `terms`, `privacy`, `fonts`; `towns` on a place page |
+| `-darbQuery pizza`                                                   | Fills the search field                                                                                                                                                                 |
+| `-darbTab hours`                                                     | Opens the place page on `hours` or `info`                                                                                                                                              |
+| `-darbPick 3`                                                        | Turns the place page to the third place                                                                                                                                                |
+| `-darbLead bank`                                                     | Sets the need the lead card answers                                                                                                                                                    |
+| `-darbAutoBack 2.2`                                                  | With `-darbRoute`: opens the screen after a moment and closes it again, for filming the transition                                                                                     |
+| `-darbAPI http://127.0.0.1:8787`                                     | Points the forms at another server; `-darbFormFill YES` and `-darbFormSend YES` fill and send a test message there                                                                     |
+| `-darbReset YES`                                                     | Forgets what the device remembers                                                                                                                                                      |
+| `-darbDemoMedia YES`, `-darbDemoProfile all`, `-darbDemoSponsor YES` | **Demo.** Placeholder pictures, paid pages and placements, each marked as a demo                                                                                                       |
 
 `scripts/shot.sh out.png 20:30 need:food -darbLangOnce en` saves a screenshot. Simulate a position with
 `xcrun simctl location <udid> set 32.919,35.295`, or with `-darbLocation`.
@@ -121,12 +121,12 @@ The app also opens `darb://need/food`, `darb://kind/schools` and `darb://busines
 
 ## Scripts
 
-| Script | What it does |
-| --- | --- |
-| `scripts/export-data.py` | Writes the bundled data from `packages/seed/data` |
-| `scripts/sync-copy.mjs` | Brings the website's copy and legal pages into the app; `--check` verifies the catalog |
-| `scripts/fetch-fonts.sh` | Fetches the three typefaces and their licences |
-| `scripts/run.sh`, `scripts/shot.sh` | Build and launch; launch and screenshot |
+| Script                              | What it does                                                                           |
+| ----------------------------------- | -------------------------------------------------------------------------------------- |
+| `scripts/export-data.py`            | Writes the bundled data from `packages/seed/data`                                      |
+| `scripts/sync-copy.mjs`             | Brings the website's copy and legal pages into the app; `--check` verifies the catalog |
+| `scripts/fetch-fonts.sh`            | Fetches the three typefaces and their licences                                         |
+| `scripts/run.sh`, `scripts/shot.sh` | Build and launch; launch and screenshot                                                |
 
 The app group `group.il.co.darb.app` lets the widget read the language and the place chosen in the app.
 

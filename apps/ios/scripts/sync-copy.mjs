@@ -43,7 +43,11 @@ const load = async (path) => import(pathToFileURL(join(repo, path)).href);
 
 const flat = (value, prefix = "") =>
   Object.entries(value).flatMap(([k, v]) =>
-    v && typeof v === "object" ? flat(v, `${prefix}${k}.`) : typeof v === "string" ? [[prefix + k, v]] : [],
+    v && typeof v === "object"
+      ? flat(v, `${prefix}${k}.`)
+      : typeof v === "string"
+        ? [[prefix + k, v]]
+        : [],
   );
 
 /** {place} and {count} become format arguments, numbered by where the Hebrew has them. */
@@ -72,7 +76,9 @@ function take(prefix, byLang, skip = () => false) {
   const tables = Object.fromEntries(LANGS.map((l) => [l, Object.fromEntries(flat(byLang[l]))]));
   for (const key of Object.keys(tables.he)) {
     if (skip(key, tables.he[key])) continue;
-    const texts = Object.fromEntries(LANGS.map((l) => [l, noDash(tables[l][key] ?? tables.he[key])]));
+    const texts = Object.fromEntries(
+      LANGS.map((l) => [l, noDash(tables[l][key] ?? tables.he[key])]),
+    );
     if (LANGS.some((l) => OFF_COPY.test(texts[l]))) continue;
     web[`${prefix}.${key}`] = placeholders(texts);
   }
@@ -86,22 +92,33 @@ for (const lang of LANGS) {
 take("web.messages", messages);
 take("web.contact", (await load("apps/web/src/content/contact.ts")).contact);
 take("web.near", (await load("apps/web/src/content/near.ts")).near);
-take("web.join", (await load("apps/web/src/content/join.ts")).join, (key) => key.startsWith("preview.") || key.startsWith("map.gestures"));
-take("web.landing", (await load("apps/web/src/content/landing.ts")).landing, (_, value) => value.startsWith("http"));
+take(
+  "web.join",
+  (await load("apps/web/src/content/join.ts")).join,
+  (key) => key.startsWith("preview.") || key.startsWith("map.gestures"),
+);
+take("web.landing", (await load("apps/web/src/content/landing.ts")).landing, (_, value) =>
+  value.startsWith("http"),
+);
 
 // the catalog: replace what came from the website, keep the app's own
 const catalogPath = join(ios, "Darb", "Resources", "Localizable.xcstrings");
 const catalog = existsSync(catalogPath)
   ? JSON.parse(readFileSync(catalogPath, "utf8"))
   : { sourceLanguage: "he", version: "1.0", strings: {} };
-for (const key of Object.keys(catalog.strings)) if (key.startsWith("web.")) delete catalog.strings[key];
+for (const key of Object.keys(catalog.strings))
+  if (key.startsWith("web.")) delete catalog.strings[key];
 for (const [key, texts] of Object.entries(web)) {
   catalog.strings[key] = {
     extractionState: "manual",
-    localizations: Object.fromEntries(LANGS.map((l) => [l, { stringUnit: { state: "translated", value: texts[l] } }])),
+    localizations: Object.fromEntries(
+      LANGS.map((l) => [l, { stringUnit: { state: "translated", value: texts[l] } }]),
+    ),
   };
 }
-catalog.strings = Object.fromEntries(Object.entries(catalog.strings).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
+catalog.strings = Object.fromEntries(
+  Object.entries(catalog.strings).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
+);
 writeFileSync(catalogPath, JSON.stringify(catalog, null, 2) + "\n");
 
 // terms and privacy
@@ -119,7 +136,9 @@ for (const kind of ["terms", "privacy"]) {
           sections: d.sections.map((s) => ({
             id: s.id,
             title: s.title,
-            blocks: s.blocks.map((b) => (typeof b === "string" ? { text: b } : { list: [...b.list] })),
+            blocks: s.blocks.map((b) =>
+              typeof b === "string" ? { text: b } : { list: [...b.list] },
+            ),
           })),
         },
       ];
@@ -128,13 +147,22 @@ for (const kind of ["terms", "privacy"]) {
 }
 writeFileSync(
   join(ios, "Darb", "Resources", "Data", "legal.json"),
-  JSON.stringify({ updated: legal.LEGAL_UPDATED, email: legal.LEGAL_CONTACT.email, chrome: legal.legalChrome, docs }),
+  JSON.stringify({
+    updated: legal.LEGAL_UPDATED,
+    email: legal.LEGAL_CONTACT.email,
+    chrome: legal.legalChrome,
+    docs,
+  }),
 );
 
 // every phrase the app asks for must be in the catalog, in all three languages
 function swiftFiles(dir) {
   return readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
-    e.isDirectory() ? swiftFiles(join(dir, e.name)) : e.name.endsWith(".swift") ? [join(dir, e.name)] : [],
+    e.isDirectory()
+      ? swiftFiles(join(dir, e.name))
+      : e.name.endsWith(".swift")
+        ? [join(dir, e.name)]
+        : [],
   );
 }
 const used = new Set();
@@ -149,7 +177,9 @@ const missing = [...used].filter((key) => {
   return !entry || LANGS.some((l) => !entry.localizations?.[l]?.stringUnit?.value);
 });
 const own = Object.keys(catalog.strings).filter((k) => !k.startsWith("web."));
-console.log(`${Object.keys(web).length} phrases from the website, ${own.length} of the app's own, ${used.size} used in code.`);
+console.log(
+  `${Object.keys(web).length} phrases from the website, ${own.length} of the app's own, ${used.size} used in code.`,
+);
 if (missing.length) {
   console.log(`${missing.length} used in code but not in the catalog in all three languages:`);
   for (const key of missing) console.log("  " + key);

@@ -21,3 +21,8 @@ apps/web/e2e/tiles
 apps/api/test/search-quality/cases.json
 # Minified by scripts/make-splash.mjs (the source is apps/web/src/splash/reveal.css).
 packages/tokens/assets/brand/splash/*.css
+# Written by Xcode and by apps/ios/scripts/export-data.py; the app reads them as they are.
+apps/ios/Darb/Assets.xcassets
+apps/ios/Darb/Resources/Data
+apps/ios/build
+apps/ios/build-device
