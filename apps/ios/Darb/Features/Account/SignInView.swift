@@ -67,7 +67,7 @@ struct SignInView: View {
         VStack(alignment: .leading, spacing: 12) {
             RowGroup {
                 MenuRow(symbol: "person.crop.circle.fill", title: account.email ?? L("מחוברים"),
-                        detail: account.isAdmin ? L("מנהל דרב") : account.stampsFor.isEmpty ? L("עוד לא צוות של עסק") : L("צוות")) { EmptyView() }
+                        detail: account.isAdmin ? L("מנהל דרב") : account.rolesUnknown ? L("מחוברים") : account.stampsFor.isEmpty ? L("עוד לא צוות של עסק") : L("צוות")) { EmptyView() }
             }
             if account.isAdmin || !account.stampsFor.isEmpty {
                 Button { open(.stamp) } label: {
@@ -81,7 +81,12 @@ struct SignInView: View {
                 }
                 .buttonStyle(PressStyle(scale: 0.985))
             }
-            if !account.isAdmin && account.stampsFor.isEmpty {
+            if account.rolesUnknown {
+                Button { Task { await account.refreshRoles() } } label: {
+                    MenuRow(symbol: "arrow.clockwise", title: L("לא הצלחנו לבדוק את ההרשאות"), detail: L("נגעו כדי לנסות שוב"), tint: .mustard)
+                }
+                .buttonStyle(PressStyle(scale: 0.985))
+            } else if !account.isAdmin && account.stampsFor.isEmpty {
                 Text(L("כדי להחתים כרטיסים, פתחו את קישור ההזמנה שדרב שלח לעסק."))
                     .font(.darb(.footnote)).foregroundStyle(.secondary)
             }

@@ -15,6 +15,8 @@ final class Account {
     private(set) var email: String?
     /// Whether Darb's server sees this person as an admin.
     private(set) var isAdmin = false
+    /// The server could not be asked (offline, or it refused the session): neither admin nor staff is known.
+    private(set) var rolesUnknown = false
     /// The offers this person stamps cards for (admins: every active one).
     private(set) var stampsFor: [LoyaltyOffer] = []
     private(set) var busy = false
@@ -84,7 +86,7 @@ final class Account {
 
     func signOut() async {
         try? await clerk()?.auth.signOut()
-        step = .signedOut; email = nil; isAdmin = false; stampsFor = []
+        step = .signedOut; email = nil; isAdmin = false; rolesUnknown = false; stampsFor = []
     }
 
     /// A fresh session token for Darb's server.
@@ -95,9 +97,11 @@ final class Account {
 
     /// Reads what this person may do: admin, and the offers they stamp for.
     func refreshRoles() async {
-        async let admin = DarbAPI.isAdmin()
+        async let admin = DarbAPI.adminStatus()
         async let offers = LoyaltyAPI.staffOffers()
-        isAdmin = await admin
+        let status = await admin
+        isAdmin = status == 200
+        rolesUnknown = status != 200 && status != 403
         stampsFor = (try? await offers) ?? []
     }
 
@@ -134,7 +138,8 @@ extension DarbAPI {
         return (data, (res as? HTTPURLResponse)?.statusCode ?? 0)
     }
 
-    static func isAdmin() async -> Bool {
-        ((try? await authorized("admin/me"))?.1 ?? 0) == 200
+    /// admin/me's answer: 200 an admin, 403 signed in but not an admin, anything else unknown.
+    static func adminStatus() async -> Int {
+        (try? await authorized("admin/me"))?.1 ?? 0
     }
 }

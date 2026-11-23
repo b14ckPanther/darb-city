@@ -17021,6 +17021,52 @@
           }
         }
       }
+    },
+    "לא הצלחנו לבדוק את ההרשאות": {
+      "extractionState": "manual",
+      "localizations": {
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא הצלחנו לבדוק את ההרשאות"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ما قدرنا نتأكد من الصلاحيات"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't check your access"
+          }
+        }
+      }
+    },
+    "נגעו כדי לנסות שוב": {
+      "extractionState": "manual",
+      "localizations": {
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "נגעו כדי לנסות שוב"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اضغطوا لتجربوا مرة ثانية"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap to try again"
+          }
+        }
+      }
     }
   }
 }
