@@ -23,7 +23,7 @@ settings:
     SWIFT_EMIT_LOC_STRINGS: NO
     LOCALIZATION_PREFERS_STRING_CATALOGS: YES
     # Clerk's publishable key (public by design: the web admin ships it to every browser). Empty hides staff sign-in.
-    DARB_CLERK_KEY: ""
+    DARB_CLERK_KEY: pk_live_Y2xlcmsuZGFyYi5jby5pbCQ
 targets:
   Darb:
     type: application
