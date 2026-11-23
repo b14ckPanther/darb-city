@@ -219,6 +219,9 @@ model Business {
   claims         Claim[]
   joinRequests   JoinRequest[]
   offerings      SearchOffering[]
+  loyaltyOffers  LoyaltyOffer[]
+  loyaltyStaff   LoyaltyStaff[]
+  loyaltyInvites LoyaltyInvite[]
   createdAt      DateTime                              @default(now())
   updatedAt      DateTime                              @updatedAt
 
@@ -249,16 +252,19 @@ model Organization {
 }
 
 model User {
-  id            String        @id @default(uuid(7)) @db.Uuid
-  clerkUserId   String        @unique
-  locale        String        @default("he")
-  isAdmin       Boolean       @default(false)
+  id            String         @id @default(uuid(7)) @db.Uuid
+  clerkUserId   String         @unique
+  locale        String         @default("he")
+  isAdmin       Boolean        @default(false)
   memberships   Membership[]
-  claims        Claim[]       @relation("ClaimUser")
-  reviewed      Claim[]       @relation("ClaimReviewer")
+  claims        Claim[]        @relation("ClaimUser")
+  reviewed      Claim[]        @relation("ClaimReviewer")
   audits        AuditLog[]
   /// Businesses this admin or helper added from the street (join requests with source field).
   fieldCaptures JoinRequest[]
+  /// Loyalty: the businesses this person stamps cards for, and the stamps they gave.
+  loyaltyStaff  LoyaltyStaff[]
+  loyaltyEvents LoyaltyEvent[]
 
   /// Darb Helpers: friends who add businesses from their own towns. An admin approves them first.
   helperStatus     HelperStatus @default(none)
@@ -573,4 +579,92 @@ model AuditLog {
 
   @@index([entityType, entityId, at])
   @@index([at])
+}
+
+// Darb loyalty (plan 2026-11-23, step 1): a partner's offer ("the 6th coffee is free"), an anonymous card a
+// visitor carries, and the stamps the partner's staff give by scanning it at the counter.
+
+enum LoyaltyEventKind {
+  stamp
+  redeem
+}
+
+/**
+ * What a partner gives: after `goal` stamps, the reward.
+ */
+model LoyaltyOffer {
+  id              String         @id @default(uuid(7)) @db.Uuid
+  businessId      String         @db.Uuid
+  business        Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  /// "Coffee", "Any drink": what earns a stamp. Localized.
+  title           Json
+  /// "A free coffee". Localized.
+  reward          Json
+  goal            Int
+  /// One stamp per card per offer within this many minutes, so a screenshot shared around earns little.
+  cooldownMinutes Int            @default(180)
+  active          Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  events          LoyaltyEvent[]
+
+  @@index([businessId])
+}
+
+/**
+ * A visitor's card: no name, no email. `code` is printed and in the QR; `secretHash` is the hash of the
+ * secret only the visitor's phone keeps, which reads the card.
+ */
+model LoyaltyCard {
+  id         String         @id @default(uuid(7)) @db.Uuid
+  code       String         @unique
+  secretHash String         @unique
+  createdAt  DateTime       @default(now())
+  events     LoyaltyEvent[]
+}
+
+/**
+ * One stamp, or one reward handed over (which starts the count again).
+ */
+model LoyaltyEvent {
+  id      String           @id @default(uuid(7)) @db.Uuid
+  cardId  String           @db.Uuid
+  card    LoyaltyCard      @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  offerId String           @db.Uuid
+  offer   LoyaltyOffer     @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  kind    LoyaltyEventKind
+  /// Who scanned: every stamp belongs to a person at a place.
+  staffId String           @db.Uuid
+  staff   User             @relation(fields: [staffId], references: [id])
+  at      DateTime         @default(now())
+
+  @@index([cardId, offerId, at])
+  @@index([offerId, at])
+}
+
+/**
+ * Who may stamp for a business.
+ */
+model LoyaltyStaff {
+  businessId String   @db.Uuid
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  userId     String   @db.Uuid
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  addedAt    DateTime @default(now())
+
+  @@id([businessId, userId])
+  @@index([userId])
+}
+
+/**
+ * A link an admin sends to a partner's staff: opening it signed in makes them staff. Only its hash is kept.
+ */
+model LoyaltyInvite {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  tokenHash  String   @unique
+  businessId String   @db.Uuid
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  /// How many people joined with it (a counter's whole team can use one link).
+  uses       Int      @default(0)
 }
