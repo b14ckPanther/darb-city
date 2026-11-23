@@ -25,7 +25,10 @@ struct DriveLiveActivity: Widget {
                         .foregroundStyle(Color(hex: 0xFBF7EC))
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    DriveFacts(context: context).padding(.top, 2)
+                    VStack(spacing: 8) {
+                        DriveFacts(context: context).padding(.top, 2)
+                        ArrivedButton()
+                    }
                 }
             } compactLeading: {
                 DriveArt(context: context, size: 24)
@@ -73,6 +76,18 @@ private struct DriveLeft: View {
     }
 }
 
+/// Ends the drive by hand, for when the phone could not tell.
+private struct ArrivedButton: View {
+    var body: some View {
+        Button(intent: EndDriveIntent()) {
+            Text(L("הגעתי")).font(.darb(size: 15, .heavy)).foregroundStyle(Color(hex: 0x0B2219))
+                .frame(maxWidth: .infinity).frame(height: 36)
+                .background(mustard, in: Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 private struct DriveFacts: View {
     let context: ActivityViewContext<DriveAttributes>
     var body: some View {
@@ -100,7 +115,15 @@ private struct DriveLockView: View {
                 Spacer(minLength: 6)
                 DriveLeft(context: context, size: 34)
             }
-            DriveFacts(context: context)
+            HStack(spacing: 10) {
+                DriveFacts(context: context)
+                Button(intent: EndDriveIntent()) {
+                    Text(L("הגעתי")).font(.darb(size: 14, .heavy)).foregroundStyle(Color(hex: 0x0B2219))
+                        .padding(.horizontal, 14).frame(height: 30)
+                        .background(mustard, in: Capsule())
+                }
+                .buttonStyle(.plain)
+            }
         }
         .padding(16)
     }
