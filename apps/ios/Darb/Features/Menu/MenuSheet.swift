@@ -3,6 +3,8 @@ import SwiftUI
 /// A page of the menu.
 enum MenuPage: Hashable {
     case settings, saved, plans, about, town, fonts
+    /// The visitor's Darb card; signing in for staff; stamping at the counter; Darb's management.
+    case card, account, stamp, admin
     case join(plan: String?)
     case contact(topic: DarbAPI.Inquiry.Topic, plan: String?)
     case legal(LegalKind)
@@ -19,6 +21,10 @@ enum MenuPage: Hashable {
         case "terms": self = .legal(.terms)
         case "privacy": self = .legal(.privacy)
         case "fonts": self = .fonts
+        case "card": self = .card
+        case "account": self = .account
+        case "stamp": self = .stamp
+        case "admin": self = .admin
         default: return nil
         }
     }
@@ -34,6 +40,7 @@ struct MenuStart: Identifiable {
 /// The rest of the app behind one button: the language, where you are, what you kept, the settings,
 /// and for a business owner the plans, joining and a way to write to Darb. Every page opens inside it.
 struct MenuSheet: View {
+    @State private var account = Account.shared
     @Environment(Store.self) private var store
     @Environment(\.dismiss) private var dismiss
     /// Opens a place on the home screen's own stack, after the menu has closed.
@@ -57,6 +64,10 @@ struct MenuSheet: View {
                         case .about: AboutView(path: $path)
                         case .town: TownList { path.removeLast() }.page(L("ישוב ומיקום"))
                         case .fonts: FontsView()
+                        case .card: MyCardView()
+                        case .account: SignInView { path.append($0) }
+                        case .stamp: StampView()
+                        case .admin: AdminView()
                         case .join(let plan): JoinForm(plan: plan)
                         case .contact(let topic, let plan): ContactForm(topic: topic, plan: plan)
                         case .legal(let kind): LegalView(kind: kind)
@@ -92,6 +103,10 @@ struct MenuSheet: View {
         case .join: "join"
         case .contact: "contact"
         case .legal(let k): k.rawValue
+        case .card: "card"
+        case .account: "account"
+        case .stamp: "stamp"
+        case .admin: "admin"
         }
     }
 
@@ -128,8 +143,21 @@ struct MenuSheet: View {
                 .listRowBackground(Color.card)
             }
             Section(L("שלי")) {
+                link(.card, "qrcode", .mustard, L("כרטיס דרב"), L("החתמות והטבות אצל העסקים השותפים"))
                 link(.saved, "bookmark.fill", Color(hex: 0xFF7FBE), L("מקומות ששמרתי"), store.saved.isEmpty ? L("עוד לא שמרתם מקום") : L("%lld מקומות", store.saved.count))
                 link(.settings, "gearshape.fill", Color(hex: 0x66CCFF), L("הגדרות"), L("שפה, מראה, התראות וניווט"))
+            }
+            if Account.available {
+                Section(L("צוות")) {
+                    if account.isAdmin || !account.stampsFor.isEmpty {
+                        link(.stamp, "qrcode.viewfinder", Color(hex: 0x3DDC97), L("החתמת כרטיס"), L("סריקה במצלמה, החתמה בנגיעה"))
+                    }
+                    if account.isAdmin {
+                        link(.admin, "slider.horizontal.3", Color(hex: 0x66CCFF), L("ניהול"), L("הטבות, קישורי צוות וכיסוי לפי ישוב"))
+                    }
+                    link(.account, "person.crop.circle.fill", Color(hex: 0xB79CFF), account.step == .signedIn ? (account.email ?? L("מחוברים")) : L("כניסה לצוות"),
+                         account.step == .signedIn ? L("מחוברים") : L("לצוות של דרב ושל העסקים השותפים"))
+                }
             }
             Section(L("לבעלי עסקים")) {
                 link(.plans, "rectangle.stack.fill", .mustard, L("תוכניות ומחירים"), store.paidFrom.map { L("רישום בחינם, ותוכניות מ ₪%lld לחודש", $0) })
