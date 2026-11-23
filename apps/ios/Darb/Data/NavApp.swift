@@ -69,12 +69,22 @@ enum Outside {
     /// A link to a place that opens anywhere, for sharing with somebody else.
     static func shareLink(_ b: Business) -> URL { URL(string: "https://maps.apple.com/?ll=\(b.lat),\(b.lng)&q=\(b.name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")")! }
     static func phone(_ p: String) -> URL? { URL(string: "tel:" + p.filter { $0.isNumber || $0 == "+" }) }
-    static func whatsapp(_ p: String) -> URL? { URL(string: "https://wa.me/" + p.filter(\.isNumber)) }
+    static func whatsapp(_ p: String) -> URL? { URL(string: "https://wa.me/" + waDigits(p)) }
+    /// A number as WhatsApp's link wants it: the country code and the number, digits only. Numbers kept the local
+    /// way ("054-722-7619") lose the 0 and gain Israel's 972; a link without the country code is refused.
+    static func waDigits(_ p: String) -> String {
+        var d = p.filter(\.isNumber)
+        if d.hasPrefix("00") { d.removeFirst(2) }
+        if d.hasPrefix("9720") { d = "972" + d.dropFirst(4) }
+        if d.hasPrefix("0") { d = "972" + d.dropFirst() }
+        else if d.count == 9, !d.hasPrefix("972") { d = "972" + d }
+        return d
+    }
     /// The question to send before driving to a place whose hours are not its own.
     static var question: String { L("היי, ראיתי אתכם בדרב. אתם פתוחים עכשיו?") }
     /// WhatsApp with the question already written.
     static func ask(_ p: String) -> URL? {
-        var c = URLComponents(string: "https://wa.me/" + p.filter(\.isNumber))
+        var c = URLComponents(string: "https://wa.me/" + waDigits(p))
         c?.queryItems = [URLQueryItem(name: "text", value: question)]
         return c?.url
     }
