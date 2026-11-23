@@ -11,7 +11,7 @@ export const ipHash = (salt: string, ip: string) =>
 /**
  * "report" counts wrong report keys only; "inquiry" counts /contact messages; "lookup", "join" and
  * "upload" count the /join form's lookups, forms and photos; "locate" counts an admin's Find the
- * place searches (keyed by the admin's user id rather than an IP).
+ * place searches (keyed by the admin's user id rather than an IP); "card" counts new loyalty cards.
  */
 type Bucket =
   | "search"
@@ -23,7 +23,8 @@ type Bucket =
   | "lookup"
   | "join"
   | "upload"
-  | "locate";
+  | "locate"
+  | "card";
 
 @Injectable()
 export class RateLimiter {
