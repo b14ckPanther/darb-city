@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>דרב</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>he</string>
+		<string>ar</string>
+		<string>en</string>
+	</array>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>XPC!</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>NSExtension</key>
+	<dict>
+		<key>NSExtensionPointIdentifier</key>
+		<string>com.apple.widgetkit-extension</string>
+	</dict>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Heebo-Regular.ttf</string>
+		<string>Heebo-Medium.ttf</string>
+		<string>Heebo-SemiBold.ttf</string>
+		<string>Heebo-Bold.ttf</string>
+		<string>Heebo-ExtraBold.ttf</string>
+		<string>Heebo-Black.ttf</string>
+		<string>Cairo-Regular.ttf</string>
+		<string>Cairo-Medium.ttf</string>
+		<string>Cairo-SemiBold.ttf</string>
+		<string>Cairo-Bold.ttf</string>
+		<string>Cairo-ExtraBold.ttf</string>
+		<string>Cairo-Black.ttf</string>
+		<string>Ubuntu-Regular.ttf</string>
+		<string>Ubuntu-Medium.ttf</string>
+		<string>Ubuntu-Bold.ttf</string>
+		<string>Karantina-Bold.ttf</string>
+		<string>Lalezar-Regular.ttf</string>
+		<string>DSEG7Classic-Bold.ttf</string>
+	</array>
+</dict>
+</plist>
