@@ -73,9 +73,11 @@ struct Business: Sendable, Hashable, Identifiable {
         let week: Int
         let demoHours: Bool
         let tags: Tri?
-        init(id: Int, names: Tri, kind: String, place: String, lat: Double, lng: Double, hours: Hours, week: Int, demoHours: Bool, tags: Tri?) {
+        let logo: String?
+        let cover: String?
+        init(id: Int, names: Tri, kind: String, place: String, lat: Double, lng: Double, hours: Hours, week: Int, demoHours: Bool, tags: Tri?, logo: String?, cover: String?) {
             self.id = id; self.names = names; self.kind = kind; self.place = place; self.lat = lat; self.lng = lng
-            self.hours = hours; self.week = week; self.demoHours = demoHours; self.tags = tags
+            self.hours = hours; self.week = week; self.demoHours = demoHours; self.tags = tags; self.logo = logo; self.cover = cover
         }
     }
     private let core: Core
@@ -85,8 +87,8 @@ struct Business: Sendable, Hashable, Identifiable {
     init(id: Int, name: String, kind: String, place: String, lat: Double, lng: Double, km: Double, hours: Hours, demoHours: Bool, tag: String?) {
         self.init(id: id, names: Tri(name), kind: kind, place: place, lat: lat, lng: lng, km: km, hours: hours, demoHours: demoHours, tags: tag.map { Tri($0) })
     }
-    init(id: Int, names: Tri, kind: String, place: String, lat: Double, lng: Double, km: Double = 0, hours: Hours, week: Int = -1, demoHours: Bool, tags: Tri?) {
-        core = Core(id: id, names: names, kind: kind, place: place, lat: lat, lng: lng, hours: hours, week: week, demoHours: demoHours, tags: tags)
+    init(id: Int, names: Tri, kind: String, place: String, lat: Double, lng: Double, km: Double = 0, hours: Hours, week: Int = -1, demoHours: Bool, tags: Tri?, logo: String? = nil, cover: String? = nil) {
+        core = Core(id: id, names: names, kind: kind, place: place, lat: lat, lng: lng, hours: hours, week: week, demoHours: demoHours, tags: tags, logo: logo, cover: cover)
         self.km = km
     }
 
@@ -103,6 +105,9 @@ struct Business: Sendable, Hashable, Identifiable {
     var demoHours: Bool { core.demoHours }
     /// A line about the place from its source, when it has one.
     var tags: Tri? { core.tags }
+    /// The business's own logo and cover photo, as addresses on Darb's media server, when it has given them.
+    var logo: String? { core.logo }
+    var cover: String? { core.cover }
 
     /// The name in the language in use now.
     var name: String { names.now }
@@ -158,6 +163,8 @@ struct Extra: Decodable, Sendable {
     let wa: String?
     let attr: Attributes?
     let links: Links?
+    /// The business's photos, as addresses on Darb's media server.
+    var photos: [String]? = nil
 }
 
 struct Attributes: Decodable, Sendable {
@@ -206,6 +213,9 @@ extension DarbData {
             let demo: [Int]
             let tag: [Int]
             let name: [String: [String]]
+            /// Addresses of each business's logo and cover, "" for none. Only the live map carries them.
+            let logo: [String]?
+            let cover: [String]?
         }
         let home: String
         let sectors: [Sector]
@@ -242,7 +252,9 @@ extension DarbData {
                 id: c.id[i], names: Tri(he: he[i], ar: ar[i], en: en[i]), kind: f.kinds[k].slug, place: f.places[p].slug,
                 lat: c.lat[i], lng: c.lng[i],
                 hours: f.hours.indices.contains(w) ? f.hours[w] : .unknown, week: f.hours.indices.contains(w) ? w : -1,
-                demoHours: c.demo[i] == 1, tags: tags.indices.contains(c.tag[i]) ? tags[c.tag[i]] : nil))
+                demoHours: c.demo[i] == 1, tags: tags.indices.contains(c.tag[i]) ? tags[c.tag[i]] : nil,
+                logo: c.logo.flatMap { $0.indices.contains(i) && !$0[i].isEmpty ? $0[i] : nil },
+                cover: c.cover.flatMap { $0.indices.contains(i) && !$0[i].isEmpty ? $0[i] : nil }))
         }
         return DarbData(home: f.home, sectors: f.sectors, kinds: f.kinds, places: f.places, weeks: f.hours, businesses: out)
     }

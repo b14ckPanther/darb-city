@@ -488,7 +488,7 @@ final class Store {
         if let a = arts[b.id] { return a }
         var a = ArtResolver.resolve(b, need: Need.forKind(b.kind), sector: sector(ofKind: b.kind)) { Store.hasArt($0) }
         // a business's own logo comes before any object: free for every business, whenever the data has one
-        a.logo = profile(b.id)?.logo
+        a.logo = profile(b.id)?.logo ?? b.logo
         a.initial = String(b.name.trimmingCharacters(in: .punctuationCharacters).prefix(1))
         arts[b.id] = a
         return a
