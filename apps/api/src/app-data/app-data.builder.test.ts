@@ -97,8 +97,8 @@ describe("the app's map", () => {
         },
       ],
     });
-    // a town with no business and not live is left out
-    expect(data.places.map((p) => p.slug)).toEqual(["nahf"]);
+    // every city, town and village is listed, with or without businesses yet
+    expect(data.places.map((p) => p.slug)).toEqual(["akko", "nahf"]);
     expect(data.businesses.id).toHaveLength(2);
     const firas = data.businesses.id.indexOf(businessId("nahf", "naiefcar", new Set()));
     expect(data.businesses.name.ar[firas]).toBe("معرض ابو فراس");

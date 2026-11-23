@@ -184,12 +184,11 @@ export function buildAppData(input: {
           : 1,
     );
   const used = new Set(listings.map((b) => b.place));
-  // every town the app can stand in: the live ones, and any that has a business
+  // every town the app can stand in: every city, town and village, with or without businesses yet,
+  // and any other place that has one
+  const settled = new Set(["city", "town", "village"]);
   const places = input.places
-    .filter(
-      (p) =>
-        p.type !== "country" && p.type !== "region" && (p.status === "live" || used.has(p.slug)),
-    )
+    .filter((p) => settled.has(p.type) || used.has(p.slug))
     .sort((a, b) => (a.slug < b.slug ? -1 : a.slug > b.slug ? 1 : 0));
   const placeIndex = new Map(places.map((p, i) => [p.slug, i]));
 

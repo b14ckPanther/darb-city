@@ -226,6 +226,20 @@ it("suspends seeded businesses that are no longer in the data, and only those", 
   ]);
 });
 
+it("never suspends a seeded business that somebody holds: a claim keeps it published", async () => {
+  const held = { ...data.businesses[0]!, slug: "claimed-one", brand: null, lat: 32.864 };
+  await loadSeed(prisma, { ...data, businesses: [...data.businesses, held] });
+  const user = await prisma.user.create({ data: { clerkUserId: "owner-1" } });
+  const row = await prisma.business.findFirstOrThrow({ where: { slug: "claimed-one" } });
+  await prisma.claim.create({ data: { businessId: row.id, userId: user.id, method: "phone" } });
+  await loadSeed(prisma, data);
+  const rows = await prisma.business.findMany({ orderBy: { slug: "asc" } });
+  expect(rows.map((b) => [b.slug, b.status])).toEqual([
+    ["claimed-one", "published"],
+    ["samer", "published"],
+  ]);
+});
+
 it("a real-only seed deletes untouched examples, keeps edited ones and every real business", async () => {
   const real = { ...data.businesses[0]!, slug: "real-one", tier: "basic" as const, lat: 32.861 };
   const edited = { ...data.businesses[0]!, slug: "edited-example", lat: 32.863 };
