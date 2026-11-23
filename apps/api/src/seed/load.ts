@@ -259,9 +259,17 @@ export async function loadSeed(prisma: PrismaService, data: SeedData): Promise<S
       where: { source: "seed", tier: "example", editedAt: null, id: { notIn: businessIds } },
     });
   }
-  // Seed businesses that left the data stay in place (claims may point at them) but go dark.
+  // Seed businesses that left the data stay in place but go dark, unless somebody holds them: an
+  // owner, a claim or a join request keeps a business published.
   await prisma.business.updateMany({
-    where: { source: "seed", editedAt: null, id: { notIn: businessIds } },
+    where: {
+      source: "seed",
+      editedAt: null,
+      id: { notIn: businessIds },
+      organizationId: null,
+      claims: { none: {} },
+      joinRequests: { none: {} },
+    },
     data: { status: "suspended" },
   });
 

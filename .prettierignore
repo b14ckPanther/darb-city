@@ -26,3 +26,4 @@ apps/ios/Darb/Assets.xcassets
 apps/ios/Darb/Resources/Data
 apps/ios/build
 apps/ios/build-device
+packages/seed/data/retired/*.json

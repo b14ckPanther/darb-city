@@ -123,8 +123,9 @@ describe("food importer over a fixture", () => {
   });
 });
 
-describe(`the published ${FILE}`, () => {
-  const { source, businesses } = data(`listings/${FILE}`);
+// retired on 2026-11-23 (data/retired/README.md); still checked, so it can come back as it is
+describe(`the retired ${FILE}`, () => {
+  const { source, businesses } = data(`retired/${FILE}`);
   const kinds = new Map(data("kinds.json").map((k) => [k.slug, k]));
   const places = new Map(data("places.json").map((p) => [p.slug, p]));
   const brands = new Set(data("brands.json").map((b) => b.slug));
