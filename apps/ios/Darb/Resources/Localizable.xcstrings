@@ -17159,6 +17159,29 @@
           }
         }
       }
+    },
+    "הגעתי": {
+      "extractionState": "manual",
+      "localizations": {
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הגעתי"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "وصلت"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I'm here"
+          }
+        }
+      }
     }
   }
 }

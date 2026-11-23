@@ -1,14 +1,16 @@
 import MapKit
 import SwiftUI
 
-/// The places open around you, on a map: each one a small sticker in its need's colour, the nearest ones first.
-/// A row of needs along the top narrows it to one. Touching a place opens its page.
+/// The places in view, on a map: each one a small sticker in its need's colour, open ones bright and closed ones
+/// dimmed, Darb's partners always. A row of needs along the top narrows it to one. Touching a place opens its page.
 struct OpenMap: View {
     @Environment(Store.self) private var store
     let open: (Route) -> Void
     @State private var need: String?
     @State private var camera: MapCameraPosition = .userLocation(fallback: .automatic)
     @State private var picked: Int?
+    /// What the map shows right now; pins follow it as it moves.
+    @State private var region: MKCoordinateRegion?
 
     var body: some View {
         let places = shown
@@ -17,13 +19,15 @@ struct OpenMap: View {
             ForEach(places, id: \.id) { b in
                 let n = Need.forKind(b.kind)
                 Annotation(b.name, coordinate: CLLocationCoordinate2D(latitude: b.lat, longitude: b.lng), anchor: .bottom) {
-                    Pin(art: store.art(for: b).render ?? n?.art, color: n?.color ?? .mustard, big: picked == b.id)
+                    Pin(art: store.art(for: b).render ?? n?.art, color: n?.color ?? .mustard, big: picked == b.id,
+                        open: store.status(b).isOpen)
                 }
                 .annotationTitles(.hidden)
                 .tag(b.id)
             }
         }
         .mapStyle(.standard(pointsOfInterest: .excludingAll))
+        .onMapCameraChange(frequency: .onEnd) { region = $0.region }
         .mapControls { MapUserLocationButton(); MapCompass(); MapPitchToggle() }
         .safeAreaInset(edge: .top, spacing: 0) { filters }
         .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -36,10 +40,28 @@ struct OpenMap: View {
         }
     }
 
-    /// The nearest open places, of one need when one is picked: few enough that the map stays quick.
+    /// The places in view, of one need when one is picked: Darb's partners first, then open, then nearest the middle,
+    /// few enough that the map stays quick.
     private var shown: [Business] {
         let kinds = need.flatMap(Need.byKey)?.kinds
-        return Array(store.near.lazy.filter { b in (kinds?.contains(b.kind) ?? (Need.forKind(b.kind) != nil)) && store.status(b).isOpen }.prefix(150))
+        let o = store.origin
+        let r = region ?? MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: o.lat, longitude: o.lng),
+                                             latitudinalMeters: 3500, longitudinalMeters: 3500)
+        // a little past the edges, so pins are there before they scroll in
+        let dLat = r.span.latitudeDelta * 0.6
+        let dLng = r.span.longitudeDelta * 0.6
+        let c = r.center
+        let kx = cos(c.latitude * .pi / 180)
+        let inView = store.all.filter { b in
+            abs(b.lat - c.latitude) < dLat && abs(b.lng - c.longitude) < dLng
+                && (kinds?.contains(b.kind) ?? (Need.forKind(b.kind) != nil || ShopSource.all[b.id] != nil))
+        }
+        let ranked = inView.map { b in
+            (b: b, partner: ShopSource.all[b.id] != nil, open: store.status(b).isOpen,
+             d: hypot((b.lng - c.longitude) * kx, b.lat - c.latitude))
+        }
+        .sorted { ($0.partner ? 0 : 1, $0.open ? 0 : 1, $0.d) < ($1.partner ? 0 : 1, $1.open ? 0 : 1, $1.d) }
+        return ranked.prefix(150).map(\.b)
     }
 
     private var filters: some View {
@@ -91,11 +113,12 @@ private struct Pin: View {
     let art: String?
     let color: Color
     let big: Bool
+    var open = true
     var body: some View {
         let s: CGFloat = big ? 50 : 32
         ZStack {
-            Circle().fill(color)
-            if let art { ArtImage(name: art, small: true).padding(s * 0.12) }
+            Circle().fill(open ? color : Color(hex: 0x6F8A7D))
+            if let art { ArtImage(name: art, small: true).padding(s * 0.12).saturation(open ? 1 : 0).opacity(open ? 1 : 0.6) }
         }
         .frame(width: s, height: s)
         .overlay { Circle().strokeBorder(Color.onColor, lineWidth: big ? 3 : 2) }
