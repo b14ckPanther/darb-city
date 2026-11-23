@@ -83,6 +83,10 @@
 	</array>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>$(PRODUCT_NAME) uses the camera to scan Darb cards at the counter.</string>
+	<key>DarbClerkKey</key>
+	<string>$(DARB_CLERK_KEY)</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>דרב משתמש במיקום שלכם כדי להראות מה פתוח הכי קרוב אליכם ולמדוד דקות נסיעה. המיקום נשאר במכשיר.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>

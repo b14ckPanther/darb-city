@@ -137,6 +137,8 @@ struct RootView: View {
         .task {
             // their pictures are saved on the phone once (ImageStore), so they never load one by one again
             URLCache.shared = URLCache(memoryCapacity: 16 << 20, diskCapacity: 100 << 20)
+            // a staff session kept from last time, and what it may do
+            Task { await Account.shared.restore() }
             for id in ShopSource.all.keys {
                 if let shop = try? await ShopLoader.fetch(id, lang: ShopLang(store.lang)) { await ShopLoader.warm(shop) }
             }
