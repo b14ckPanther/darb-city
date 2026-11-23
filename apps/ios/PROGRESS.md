@@ -38,14 +38,14 @@ SwiftUI first, finished and tested on iPhone; the Kotlin (Android) app follows t
 
 ## Round three: the owner's feedback (done)
 
-| Stage | What | Status |
-| --- | --- | --- |
-| 1 | Fonts, icons and emoji, and the valley by day and by night | 100% |
-| 2 | The full data and real location | 100% |
-| 3 | The language switcher and multilingual data | 100% |
-| 4 | Settings and the menu | 100% |
-| 5 | Plans, first run, contact and join | 95% (join sends no photos yet) |
-| + | The tile to page transition | 100% |
+| Stage | What                                                       | Status                         |
+| ----- | ---------------------------------------------------------- | ------------------------------ |
+| 1     | Fonts, icons and emoji, and the valley by day and by night | 100%                           |
+| 2     | The full data and real location                            | 100%                           |
+| 3     | The language switcher and multilingual data                | 100%                           |
+| 4     | Settings and the menu                                      | 100%                           |
+| 5     | Plans, first run, contact and join                         | 95% (join sends no photos yet) |
+| +     | The tile to page transition                                | 100%                           |
 
 - [x] **The valley, day and night, as one drawing at two hours.** The towns around the person, a few houses each; as many are marked open as the share of the town that is open: a coloured roof by day, a lit window by night. The largest towns carry their name and the number open. The hills begin under the header, so its text always stands on clean sky, in every language and on the small phone
 - [x] **Type**: Heebo, Cairo and Ubuntu bundled with their licences, chosen by language, all sizes relative to the text size
@@ -63,6 +63,7 @@ SwiftUI first, finished and tested on iPhone; the Kotlin (Android) app follows t
 - [x] Unit tests: 57 passing (export, location and distance, language, forms, valley layout, and the earlier ones)
 
 Still open from this round:
+
 - [ ] Join: logo and photo upload (the API has `/join/photos`) and the "find my business" lookup (`/join/lookup`)
 - [ ] The widget and Siri use the place the app last measured from; they do not ask for the position themselves
 - [ ] Street addresses from some sources exist in Hebrew only, and are shown as written
