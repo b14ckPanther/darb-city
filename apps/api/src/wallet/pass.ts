@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import type { LoyaltyCardDto, LoyaltyStandingDto } from "@darb/contracts";
 import sharp from "sharp";
 
@@ -22,14 +23,24 @@ export interface PassSettings {
 const pick = (t: Localized, lang: Lang) =>
   [t[lang], t["he"], t["ar"], t["en"]].find((v) => v && v.trim() !== "") ?? "";
 
-/** The card shown on the front: a reward ready to collect, else the latest stamped, else the newest offer. */
-export function lead(standings: LoyaltyStandingDto[]): LoyaltyStandingDto | null {
-  const ready = standings.find((s) => s.ready);
-  if (ready) return ready;
-  const stamped = standings
-    .filter((s) => s.lastStampAt)
-    .sort((a, b) => b.lastStampAt!.localeCompare(a.lastStampAt!));
-  return stamped[0] ?? standings[standings.length - 1] ?? null;
+/** The most partners the front lists; the back lists them all. */
+export const FRONT_ROWS = 4;
+
+/**
+ * The partners in the order the front shows them: a reward ready to collect, then the latest stamped, then the
+ * offers not yet started, oldest first.
+ */
+export function ordered(standings: LoyaltyStandingDto[]): LoyaltyStandingDto[] {
+  const rank = (s: LoyaltyStandingDto) => (s.ready ? 0 : s.lastStampAt ? 1 : 2);
+  return standings
+    .map((s, i) => ({ s, i }))
+    .sort(
+      (a, b) =>
+        rank(a.s) - rank(b.s) ||
+        (b.s.lastStampAt ?? "").localeCompare(a.s.lastStampAt ?? "") ||
+        a.i - b.i,
+    )
+    .map((x) => x.s);
 }
 
 const grouped = (code: string) => `${code.slice(0, 5)} ${code.slice(5)}`;
@@ -53,6 +64,8 @@ const COPY: Record<string, Record<Lang, string>> = {
     en: "Waiting at the counter",
   },
   offers: { he: "הטבות", ar: "عروض", en: "Offers" },
+  partners: { he: "שותפים", ar: "شركاء", en: "Partners" },
+  lastStamp: { he: "חותמת אחרונה", ar: "آخر ختم", en: "Last stamp" },
   emptyLabel: { he: "כרטיס דרב", ar: "بطاقة درب", en: "Darb card" },
   emptyValue: { he: "אוספים חותמות", ar: "اجمعوا أختام", en: "Collect stamps" },
   howLabel: { he: "איך", ar: "كيف", en: "How" },
@@ -86,7 +99,8 @@ function strings(entries: Record<string, string>): Buffer {
  * the one pass reads in Hebrew, Arabic or English, as the phone is set.
  */
 export function passContent(card: LoyaltyCardDto, s: PassSettings) {
-  const front = lead(card.standings);
+  const rows = ordered(card.standings);
+  const front = rows[0] ?? null;
   const text: Record<Lang, Record<string, string>> = { he: {}, ar: {}, en: {} };
   const put = (key: string, by: (lang: Lang) => string) => {
     for (const lang of LANGS) text[lang][key] = by(lang);
@@ -98,7 +112,34 @@ export function passContent(card: LoyaltyCardDto, s: PassSettings) {
   const primary: object[] = [];
   const secondary: object[] = [];
   const auxiliary: object[] = [];
-  if (front) {
+  const status = (st: LoyaltyStandingDto, l: Lang) =>
+    `${pick(st.offer.business.name, l)} · ${Math.min(st.stamps, st.offer.goal)}/${st.offer.goal}`;
+  if (rows.length > 1) {
+    // several partners: the strip lists them, and the fields say what just happened
+    const total = rows.reduce((n, st) => n + Math.min(st.stamps, st.offer.goal), 0);
+    header.push({ key: "stamps", label: copy("stamps"), value: total });
+    secondary.push(
+      front!.ready
+        ? {
+            key: "state",
+            label: copy("ready"),
+            value: put(
+              "f.ready",
+              (l) => `${pick(front!.offer.business.name, l)} · ${pick(front!.offer.reward, l)}`,
+            ),
+            changeMessage: put("f.changed", () => "%@"),
+          }
+        : front!.lastStampAt
+          ? {
+              key: "state",
+              label: copy("lastStamp"),
+              value: put("f.last", (l) => status(front!, l)),
+              changeMessage: copy("newStamp"),
+            }
+          : { key: "state", label: copy("howLabel"), value: copy("howValue") },
+    );
+    auxiliary.push({ key: "offers", label: copy("partners"), value: rows.length });
+  } else if (front) {
     const o = front.offer;
     header.push({
       key: "stamps",
@@ -126,8 +167,6 @@ export function passContent(card: LoyaltyCardDto, s: PassSettings) {
             value: put("f.more", (l) => more(o.goal - front.stamps, l)),
           },
     );
-    if (card.standings.length > 1)
-      auxiliary.push({ key: "offers", label: copy("offers"), value: card.standings.length });
   } else {
     secondary.push({ key: "offer", label: copy("emptyLabel"), value: copy("emptyValue") });
     auxiliary.push({ key: "state", label: copy("howLabel"), value: copy("howValue") });
@@ -179,13 +218,27 @@ export function passContent(card: LoyaltyCardDto, s: PassSettings) {
 
   const files = new Map<string, Buffer>([["pass.json", Buffer.from(JSON.stringify(pass), "utf8")]]);
   for (const lang of LANGS) files.set(`${lang}.lproj/pass.strings`, strings(text[lang]));
-  return { files, front };
+  return { files, rows };
 }
 
 const FOREST_HEX = "#0B2219";
+const IVORY_HEX = "#FBF7EC";
+const MUSTARD_HEX = "#FFC330";
 
 /** A round crop of the door: lit in colour for a stamp given, dark and quiet for one still to come. */
-async function coin(door: Buffer, px: number, lit: boolean): Promise<Buffer> {
+const coins = new Map<string, Promise<Buffer>>();
+/** Coins are the same for every card: each size is drawn once and kept (a few dozen small PNGs at most). */
+function coin(door: Buffer, px: number, lit: boolean): Promise<Buffer> {
+  const key = `${px}:${lit ? 1 : 0}`;
+  let made = coins.get(key);
+  if (!made) {
+    made = drawCoin(door, px, lit);
+    coins.set(key, made);
+  }
+  return made;
+}
+
+async function drawCoin(door: Buffer, px: number, lit: boolean): Promise<Buffer> {
   const mask = Buffer.from(
     `<svg width="${px}" height="${px}"><circle cx="${px / 2}" cy="${px / 2}" r="${px / 2}" fill="#fff"/></svg>`,
   );
@@ -217,54 +270,216 @@ export function layout(goal: number) {
   });
 }
 
-/**
- * The strip across the front of the card: the stamps themselves. Each is a coin with the Darb door, which lights
- * up in gold when the counter stamps it; the rest wait dark. A card with no offer yet shows one door, lit.
- * Drawn at 1x, 2x and 3x (375 by 144 points).
- */
-export async function strip(
-  front: LoyaltyStandingDto | null,
+const FONTS = {
+  he: {
+    family: "Heebo Bold",
+    file: fileURLToPath(new URL("../../assets/wallet/fonts/Heebo-Bold.ttf", import.meta.url)),
+  },
+  ar: {
+    family: "Cairo Bold",
+    file: fileURLToPath(new URL("../../assets/wallet/fonts/Cairo-Bold.ttf", import.meta.url)),
+  },
+};
+let fontsLoaded: Promise<void> | null = null;
+/** Both faces registered once, so a Hebrew name in Arabic text (or the reverse) still finds its letters. */
+export function loadFonts() {
+  fontsLoaded ??= Promise.all(
+    Object.values(FONTS).map((f) =>
+      sharp({ text: { text: "x", font: `${f.family} 10`, fontfile: f.file, rgba: true } })
+        .png()
+        .toBuffer(),
+    ),
+  ).then(() => undefined);
+  return fontsLoaded;
+}
+
+const escapeMarkup = (t: string) =>
+  t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const clip = (t: string, n: number) => (t.length > n ? `${t.slice(0, n - 1).trimEnd()}…` : t);
+
+/** A line of text as an image, no wider than maxWidth pixels. */
+async function words(text: string, px: number, color: string, lang: Lang, maxWidth: number) {
+  const f = lang === "ar" ? FONTS.ar : FONTS.he;
+  const img = await sharp({
+    text: {
+      text: `<span foreground="${color}">${escapeMarkup(text)}</span>`,
+      // the faces were registered once by loadFonts: naming the file again reloads it (seconds a line)
+      font: `${f.family} ${px}`,
+      rgba: true,
+      dpi: 72,
+    },
+  })
+    .png()
+    .toBuffer();
+  const { width = 0, height = 0 } = await sharp(img).metadata();
+  if (width <= maxWidth) return { img, width, height };
+  const scaled = await sharp(img)
+    .resize({ width: Math.floor(maxWidth) })
+    .png()
+    .toBuffer();
+  return {
+    img: scaled,
+    width: Math.floor(maxWidth),
+    height: Math.round((height * maxWidth) / width),
+  };
+}
+
+type Layer = { input: Buffer; left: number; top: number };
+
+/** One stamp: the door coin, lit and ringed in gold when given, dark when still to come. */
+async function stampAt(
   door: Buffer,
-): Promise<Map<string, Buffer>> {
-  const W = 375;
-  const H = 144;
+  x: number,
+  y: number,
+  size: number,
+  lit: boolean,
+  scale: number,
+) {
+  const px = Math.round(size * scale);
+  const layer: Layer = {
+    input: await coin(door, px, lit),
+    left: Math.round(x * scale),
+    top: Math.round(y * scale),
+  };
+  const c = { x: (x + size / 2) * scale, y: (y + size / 2) * scale };
+  const r = (size / 2 - 0.75) * scale;
+  const ring = lit
+    ? `<circle cx="${c.x}" cy="${c.y}" r="${r}" fill="none" stroke="${MUSTARD}" stroke-width="${Math.max(1.2, size / 16) * scale}"/>`
+    : `<circle cx="${c.x}" cy="${c.y}" r="${r}" fill="none" stroke="rgba(251,247,236,0.16)" stroke-width="${scale}"/>`;
+  return { layer, ring };
+}
+
+const W = 375;
+const H = 144;
+const SCALES = [
+  ["strip.png", 1],
+  ["strip@2x.png", 2],
+  ["strip@3x.png", 3],
+] as const;
+
+async function flatten(scale: number, layers: Layer[], svg: string) {
+  const overlay = Buffer.from(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${W * scale}" height="${H * scale}">${svg}</svg>`,
+  );
+  return sharp({
+    create: { width: W * scale, height: H * scale, channels: 4, background: FOREST_HEX },
+  })
+    .composite([...layers, { input: overlay, left: 0, top: 0 }])
+    .png()
+    .toBuffer();
+}
+
+/** One partner, or none yet: big doors across the strip (one lit door when there is no offer at all). */
+async function bigDoors(front: LoyaltyStandingDto | null, door: Buffer, scale: number) {
   const goal = front?.offer.goal ?? 0;
   const done = Math.min(front?.stamps ?? 0, goal);
   const spots = front ? layout(goal) : [{ x: (W - 118) / 2, y: (H - 118) / 2, size: 118 }];
-  const out = new Map<string, Buffer>();
-  for (const [name, scale] of [
-    ["strip.png", 1],
-    ["strip@2x.png", 2],
-    ["strip@3x.png", 3],
-  ] as const) {
-    const layers: { input: Buffer; left: number; top: number }[] = [];
-    let rings = "";
-    for (const [i, p] of spots.entries()) {
-      const lit = !front || i < done;
-      const px = Math.round(p.size * scale);
-      layers.push({
-        input: await coin(door, px, lit),
-        left: Math.round(p.x * scale),
-        top: Math.round(p.y * scale),
-      });
-      const c = { x: (p.x + p.size / 2) * scale, y: (p.y + p.size / 2) * scale };
-      const r = (p.size / 2 - 1) * scale;
-      rings += lit
-        ? `<circle cx="${c.x}" cy="${c.y}" r="${r}" fill="none" stroke="${MUSTARD}" stroke-width="${1.8 * scale}"/>`
-        : `<circle cx="${c.x}" cy="${c.y}" r="${r}" fill="none" stroke="rgba(251,247,236,0.16)" stroke-width="${1.5 * scale}"/>`;
-    }
-    const overlay = Buffer.from(
-      `<svg xmlns="http://www.w3.org/2000/svg" width="${W * scale}" height="${H * scale}">${rings}</svg>`,
-    );
-    out.set(
-      name,
-      await sharp({
-        create: { width: W * scale, height: H * scale, channels: 4, background: FOREST_HEX },
-      })
-        .composite([...layers, { input: overlay, left: 0, top: 0 }])
-        .png()
-        .toBuffer(),
-    );
+  const layers: Layer[] = [];
+  let rings = "";
+  for (const [i, p] of spots.entries()) {
+    const s = await stampAt(door, p.x, p.y, p.size, !front || i < done, scale);
+    layers.push(s.layer);
+    rings += s.ring;
   }
+  return flatten(scale, layers, rings);
+}
+
+/**
+ * Several partners: a row each, the name and the reward on the reading side, the stamps across from them. Right to
+ * left in Hebrew and Arabic, so the first stamp sits nearest the name.
+ */
+async function partnerRows(rows: LoyaltyStandingDto[], door: Buffer, lang: Lang, scale: number) {
+  const rtl = lang !== "en";
+  const n = rows.length;
+  const padX = 16;
+  const padY = 6;
+  const rowH = (H - padY * 2) / n;
+  const nameW = 148;
+  const dotsW = W - padX * 2 - nameW - 12;
+  const twoLines = rowH >= 40;
+  const namePx = n <= 2 ? 18 : n === 3 ? 15 : 14;
+  const layers: Layer[] = [];
+  let svg = "";
+  for (const [r, st] of rows.entries()) {
+    const top = padY + r * rowH;
+    if (r > 0)
+      svg += `<rect x="${padX * scale}" y="${top * scale}" width="${(W - padX * 2) * scale}" height="${Math.max(1, scale * 0.6)}" fill="rgba(251,247,236,0.10)"/>`;
+    const o = st.offer;
+    const name = await words(
+      clip(pick(o.business.name, lang), 20),
+      namePx * scale,
+      IVORY_HEX,
+      lang,
+      nameW * scale,
+    );
+    const sub = twoLines
+      ? await words(
+          clip(
+            st.ready ? `${COPY["ready"]![lang]} · ${pick(o.reward, lang)}` : pick(o.reward, lang),
+            28,
+          ),
+          (n <= 2 ? 12 : 11) * scale,
+          MUSTARD_HEX,
+          lang,
+          nameW * scale,
+        )
+      : null;
+    const lineGap = sub ? Math.round(2 * scale) : 0;
+    const block = name.height + lineGap + (sub ? sub.height : 0);
+    let y = Math.round((top + rowH / 2) * scale - block / 2);
+    const side = (w: number) => Math.round(rtl ? (W - padX) * scale - w : padX * scale);
+    layers.push({ input: name.img, left: side(name.width), top: y });
+    y += name.height + lineGap;
+    if (sub) layers.push({ input: sub.img, left: side(sub.width), top: y });
+
+    const goal = o.goal;
+    const done = Math.min(st.stamps, goal);
+    const gap = 4;
+    const size = Math.min(rowH * 0.62, 26, (dotsW - gap * (goal - 1)) / goal);
+    const width = goal * size + (goal - 1) * gap;
+    // the stamps sit across from the name, the first one nearest it
+    const start = rtl ? padX + (dotsW - width) : W - padX - dotsW;
+    const cy = top + rowH / 2 - size / 2;
+    for (let i = 0; i < goal; i++) {
+      const slot = rtl ? goal - 1 - i : i;
+      const x = start + slot * (size + gap);
+      const lit = i < done;
+      if (size >= 14) {
+        const s = await stampAt(door, x, cy, size, lit, scale);
+        layers.push(s.layer);
+        svg += s.ring;
+      } else {
+        const c = { x: (x + size / 2) * scale, y: (cy + size / 2) * scale };
+        svg += lit
+          ? `<circle cx="${c.x}" cy="${c.y}" r="${(size / 2) * scale}" fill="${MUSTARD}"/>`
+          : `<circle cx="${c.x}" cy="${c.y}" r="${(size / 2 - 0.5) * scale}" fill="none" stroke="rgba(251,247,236,0.25)" stroke-width="${scale}"/>`;
+      }
+    }
+  }
+  return flatten(scale, layers, svg);
+}
+
+/**
+ * The strip across the front of the card. One partner: its stamps as big doors that light up in gold. Several:
+ * a row per partner (up to four), each with its own doors. The rows carry names, so they are drawn per language.
+ * Drawn at 1x, 2x and 3x (375 by 144 points).
+ */
+export async function strip(
+  standings: LoyaltyStandingDto[],
+  door: Buffer,
+): Promise<Map<string, Buffer>> {
+  const rows = ordered(standings).slice(0, FRONT_ROWS);
+  const out = new Map<string, Buffer>();
+  if (rows.length <= 1) {
+    for (const [name, scale] of SCALES) out.set(name, await bigDoors(rows[0] ?? null, door, scale));
+    return out;
+  }
+  await loadFonts();
+  for (const lang of LANGS)
+    for (const [name, scale] of SCALES) {
+      const png = await partnerRows(rows, door, lang, scale);
+      // per language only: Wallet prefers a shared strip over a localized one when both exist
+      out.set(`${lang}.lproj/${name}`, png);
+    }
   return out;
 }

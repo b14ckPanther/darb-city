@@ -5,7 +5,7 @@ import { APP_CONFIG, type AppConfig } from "../config.js";
 import { LoyaltyService } from "../loyalty/loyalty.service.js";
 import { PrismaService } from "../prisma/prisma.service.js";
 import type { PassPusher } from "./apns.js";
-import { passContent, strip } from "./pass.js";
+import { loadFonts, passContent, strip } from "./pass.js";
 import { pem, signedPass, type PassCredentials } from "./sign.js";
 
 export const PASS_PUSHER = Symbol("PASS_PUSHER");
@@ -37,6 +37,8 @@ export class WalletService {
         : null;
     if (!this.creds)
       this.logger.log("Apple Wallet is off: WALLET_PASS_CERT and WALLET_PASS_KEY are not set");
+    // the fonts take seconds to load the first time: at boot, not on someone's first card
+    else void loadFonts().catch((err: unknown) => this.logger.warn(`Wallet fonts: ${String(err)}`));
     this.images = new Map(
       ["icon.png", "icon@2x.png", "icon@3x.png", "logo.png", "logo@2x.png", "logo@3x.png"].map(
         (n) => [n, asset(n)] as const,
@@ -75,7 +77,7 @@ export class WalletService {
     const card = await this.loyalty.cardByCode(code, new Date());
     if (!card) return null;
     const w = this.config.wallet;
-    const { files, front } = passContent(card, {
+    const { files } = passContent(card, {
       passType: w.passType,
       teamId: w.teamId,
       serviceUrl: w.serviceUrl,
@@ -83,7 +85,7 @@ export class WalletService {
       scanUrl: scanUrl(card.code),
     });
     for (const [n, b] of this.images) files.set(n, b);
-    for (const [n, b] of await strip(front, this.door)) files.set(n, b);
+    for (const [n, b] of await strip(card.standings, this.door)) files.set(n, b);
     return { data: signedPass(files, this.creds), updatedAt: card.updatedAt };
   }
 
