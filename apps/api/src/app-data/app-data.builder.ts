@@ -96,6 +96,32 @@ export interface BusinessRow {
   website: string | null;
   attributes: unknown;
   links: unknown;
+  /** { key } of the owner's logo in the media bucket, or null. */
+  logo: unknown;
+  /** [{ key, alt }] of the business's photos in the media bucket. */
+  photos: unknown;
+}
+
+/** Where the media bucket's files are served (apps/web/src/lib/csp.ts MEDIA_ORIGIN). */
+export const MEDIA_ORIGIN = "https://media.darb.co.il";
+
+/** A media key as a full address; null for anything that is not a plain key. */
+export function mediaUrl(key: unknown): string | null {
+  return typeof key === "string" && /^[\w./-]+$/.test(key) && !key.includes("..")
+    ? `${MEDIA_ORIGIN}/${key}`
+    : null;
+}
+
+function logoOf(logo: unknown): string {
+  if (!logo || typeof logo !== "object") return "";
+  return mediaUrl((logo as { key?: unknown }).key) ?? "";
+}
+
+function photosOf(photos: unknown): string[] {
+  if (!Array.isArray(photos)) return [];
+  return photos
+    .map((p) => mediaUrl((p as { key?: unknown } | null)?.key))
+    .filter((u): u is string => !!u);
 }
 
 /** A text in the three languages; a missing language falls back to Hebrew, then to any. */
@@ -231,6 +257,9 @@ export function buildAppData(input: {
     demo: [] as number[],
     tag: [] as number[],
     name: { he: [] as string[], ar: [] as string[], en: [] as string[] },
+    // the business's own logo and its first photo (the cover), as full addresses; "" when it has none
+    logo: [] as string[],
+    cover: [] as string[],
   };
   const details: Record<string, Record<string, unknown>> = {};
   const taken = new Set<number>();
@@ -248,6 +277,9 @@ export function buildAppData(input: {
     cols.hours.push(hoursRow(real ?? sampleWeek(kindSector.get(b.kind)!)));
     cols.demo.push(real ? 0 : 1);
     cols.tag.push(tagRow(b.tagline));
+    const photos = photosOf(b.photos);
+    cols.logo.push(logoOf(b.logo));
+    cols.cover.push(photos[0] ?? "");
     for (const l of LANGS) cols.name[l].push(name[l]);
 
     const d: Record<string, unknown> = {};
@@ -278,6 +310,7 @@ export function buildAppData(input: {
       ),
     );
     if (Object.keys(links).length) d.links = links;
+    if (photos.length) d.photos = photos;
     if (Object.keys(d).length) details[String(id)] = d;
   }
 
