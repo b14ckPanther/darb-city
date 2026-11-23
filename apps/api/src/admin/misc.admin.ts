@@ -1,5 +1,11 @@
 import { Controller, Injectable, Req, UseGuards } from "@nestjs/common";
-import { contract, type AdminEntity, type AuditRowDto } from "@darb/contracts";
+import {
+  contract,
+  COVERAGE_NEEDS,
+  type AdminEntity,
+  type AuditRowDto,
+  type CoverageRowDto,
+} from "@darb/contracts";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { AdminGuard, type AdminActor, type AdminRequest } from "../auth/admin.guard.js";
 import { PrismaService } from "../prisma/prisma.service.js";
@@ -16,6 +22,58 @@ export class MiscAdmin {
     private readonly prisma: PrismaService,
     private readonly writer: AdminWriter,
   ) {}
+
+  /**
+   * Every city, town and village, the biggest first, with its published real businesses and how many answer each
+   * of the nine everyday needs: where to send helpers next.
+   */
+  async coverage(): Promise<CoverageRowDto[]> {
+    const rows = await this.prisma.$queryRaw<
+      {
+        id: string;
+        slug: string;
+        name: Record<string, string>;
+        type: "city" | "town" | "village";
+        status: "live" | "soon";
+        population: number | null;
+        kind: string | null;
+        n: bigint;
+      }[]
+    >`
+      SELECT p.id, p.slug, p.name, p.type::text AS type, p.status::text AS status, p.population,
+             k.slug AS kind, count(b.id) AS n
+      FROM "Place" p
+      LEFT JOIN "Business" b ON b."placeId" = p.id AND b.status = 'published' AND b.tier <> 'example'
+      LEFT JOIN "Kind" k ON k.id = b."primaryKindId" AND k.status = 'active'
+      WHERE p.type IN ('city', 'town', 'village')
+      GROUP BY p.id, k.slug`;
+    const needOf = new Map<string, string>(
+      COVERAGE_NEEDS.flatMap((need) => need.kinds.map((k) => [k, need.key] as const)),
+    );
+    const out = new Map<string, CoverageRowDto>();
+    for (const r of rows) {
+      const row = out.get(r.id) ?? {
+        id: r.id,
+        slug: r.slug,
+        name: r.name,
+        type: r.type,
+        status: r.status,
+        population: r.population,
+        businesses: 0,
+        needs: Object.fromEntries(COVERAGE_NEEDS.map((need) => [need.key, 0])),
+      };
+      if (r.kind) {
+        const n = Number(r.n);
+        row.businesses += n;
+        const need = needOf.get(r.kind);
+        if (need) row.needs[need] = (row.needs[need] ?? 0) + n;
+      }
+      out.set(r.id, row);
+    }
+    return [...out.values()].sort(
+      (a, b) => (b.population ?? -1) - (a.population ?? -1) || a.slug.localeCompare(b.slug),
+    );
+  }
 
   async audit(entityType: AdminEntity, entityId: string): Promise<AuditRowDto[]> {
     const rows = await this.prisma.auditLog.findMany({
@@ -158,6 +216,10 @@ export class AdminMiscController {
       overview: async () => {
         req.res?.setHeader("cache-control", "no-store");
         return { status: 200, body: await this.overview.overview(actor) };
+      },
+      coverage: async () => {
+        req.res?.setHeader("cache-control", "no-store");
+        return { status: 200, body: await this.misc.coverage() };
       },
       search: async ({ query }) => {
         req.res?.setHeader("cache-control", "no-store");

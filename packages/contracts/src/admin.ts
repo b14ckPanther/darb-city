@@ -552,6 +552,36 @@ export const AdminOverviewSchema = z.object({
   generatedAt: z.string(),
 });
 export const AdminSearchQuerySchema = z.object({ q: z.string().trim().min(1).max(80) });
+
+/**
+ * The nine everyday needs the apps open on, and the kinds behind each (apps/ios/Darb/Data/Needs.swift): what a
+ * town needs covered first.
+ */
+export const COVERAGE_NEEDS = [
+  { key: "food", kinds: ["restaurants", "grill", "hummus"] },
+  { key: "sweets", kinds: ["sweets", "ice-cream"] },
+  { key: "coffee", kinds: ["cafes"] },
+  { key: "bakery", kinds: ["bakeries"] },
+  { key: "pharmacy", kinds: ["pharmacies"] },
+  { key: "grocery", kinds: ["shops"] },
+  { key: "fuel", kinds: ["stations"] },
+  { key: "garage", kinds: ["garages"] },
+  { key: "bank", kinds: ["banks"] },
+] as const;
+export type CoverageNeed = (typeof COVERAGE_NEEDS)[number]["key"];
+
+/** One city, town or village: its published businesses, and how many of them answer each need. */
+export const CoverageRowSchema = z.object({
+  id,
+  slug: z.string(),
+  name: z.record(z.string(), z.string()),
+  type: z.enum(["city", "town", "village"]),
+  status: z.enum(["live", "soon"]),
+  population: z.number().int().nullable(),
+  businesses: z.number().int(),
+  needs: z.record(z.string(), z.number().int()),
+});
+export type CoverageRowDto = z.infer<typeof CoverageRowSchema>;
 const hit = z.object({ id, slug: z.string(), name: LocalizedSchema });
 export const AdminSearchSchema = z.object({
   businesses: z.array(
@@ -651,6 +681,12 @@ export const adminContract = c.router({
       method: "GET",
       path: "/admin/overview",
       responses: { 200: AdminOverviewSchema, ...guarded },
+    },
+    /** Every city, town and village with what is covered there, the biggest first. */
+    coverage: {
+      method: "GET",
+      path: "/admin/coverage",
+      responses: { 200: z.array(CoverageRowSchema), ...guarded },
     },
     /** The command palette: a few of each, by name or address. */
     search: {

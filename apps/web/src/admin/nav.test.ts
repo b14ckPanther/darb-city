@@ -25,6 +25,7 @@ it("keeps every existing admin screen in the menu, in four groups, with five pho
       "",
       "/businesses",
       "/places",
+      "/towns",
       "/sectors",
       "/kinds",
       "/join-requests",

@@ -98,3 +98,38 @@ it("marks which rows have seed data behind them", async () => {
   const biz = await http().get(`/admin/businesses/${f.abuSalim.id}`).set("authorization", ADMIN);
   expect(biz.body.seedSource).toBe(false);
 });
+
+it("counts, for every city, town and village, the real businesses and the ones each need has", async () => {
+  const bakeries = await prisma.kind.create({
+    data: {
+      slug: "bakeries",
+      sectorId: f.food.id,
+      name: { en: "Bakeries" },
+      synonyms: { he: [], ar: [], en: [] },
+      template: "menu",
+      contentSchema: {},
+      attributes: [],
+      order: 2,
+    },
+  });
+  // real (not a showroom example) and published: the only kind that counts
+  await prisma.business.updateMany({ where: { slug: "abu-salim" }, data: { tier: "basic" } });
+  await prisma.business.update({
+    where: { id: f.tamraBarber.id },
+    data: { tier: "basic", primaryKindId: bakeries.id },
+  });
+  const res = await http().get("/admin/coverage").set("authorization", ADMIN);
+  expect(res.status).toBe(200);
+  expect(res.headers["cache-control"]).toBe("no-store");
+  const bySlug = new Map(
+    res.body.map((r: { slug: string; businesses: number; needs: Record<string, number> }) => [
+      r.slug,
+      r,
+    ]),
+  );
+  expect([...bySlug.keys()].sort()).toEqual(["eilat", "sakhnin", "tamra"]);
+  expect(bySlug.get("sakhnin")).toMatchObject({ businesses: 1, needs: { bakery: 0, food: 0 } });
+  expect(bySlug.get("tamra")).toMatchObject({ businesses: 1, needs: { bakery: 1 } });
+  expect(bySlug.get("eilat")).toMatchObject({ businesses: 0, status: "soon" });
+  expect((await http().get("/admin/coverage").set("authorization", STRANGER)).status).toBe(403);
+});
