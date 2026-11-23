@@ -143,9 +143,12 @@ struct HeroArt: View {
         } else if let r = art.render {
             FloatingArt(name: r).frame(width: size, height: size)
         } else {
+            // no object of its own: its kind's symbol, on its colour, as its card in the rail shows it
             Image(systemName: art.symbol)
-                .font(.darb(size: size * 0.46, .bold))
-                .foregroundStyle(ink.opacity(0.16))
+                .font(.symbol(size: size * 0.34))
+                .foregroundStyle(Color.onColor.opacity(0.82))
+                .frame(width: size * 0.62, height: size * 0.62)
+                .background(Color(hexString: art.tint).opacity(0.92), in: Circle())
                 .frame(width: size, height: size)
         }
     }
