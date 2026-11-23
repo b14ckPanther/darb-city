@@ -33,6 +33,7 @@ it("keeps every existing admin screen in the menu, in four groups, with five pho
       "/helpers",
       "/inquiries",
       "/report",
+      "/loyalty",
       "/plans",
     ].sort(),
   );
