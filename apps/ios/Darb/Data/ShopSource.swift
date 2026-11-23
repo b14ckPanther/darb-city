@@ -9,7 +9,11 @@ struct ShopSource: Sendable {
         case kitchen
         /// A shop of products standing on their own colours, chosen by hair type, in Arabic (Raghad Beauty).
         case shelf
+        /// A car lot: cars by body type, each with its photos and its facts, asked about on WhatsApp (Abu Firas).
+        case lot
     }
+    /// Whether picks go into a bag and are ordered together; a lot is asked about one car at a time.
+    var orders: Bool { system != .lot }
     let system: System
     let base: URL
     let key: String
@@ -22,6 +26,8 @@ struct ShopSource: Sendable {
     var logo: URL? = nil
     /// Where orders are sent, as WhatsApp digits.
     let whatsapp: String
+    /// The business's own website, for the link to an item in a WhatsApp question.
+    var site: URL? = nil
 
     /// The language the shop is read in: the one asked for when the business keeps it, otherwise its own.
     func lang(_ wanted: ShopLang) -> ShopLang { langs.contains(wanted) ? wanted : langs[0] }
@@ -39,5 +45,11 @@ struct ShopSource: Sendable {
                               bg: 0xFDEBF1, surface: 0xFFFFFF, ink: 0x26102B, accent: 0xB4125F, light: true,
                               langs: [.ar], logo: URL(string: "https://raghad.darb.co.il/icons/icon-512.png"),
                               whatsapp: "972504774367"),
+        // Rechev Abu Firas, Nahf: used cars
+        596130324: ShopSource(system: .lot,
+                              base: URL(string: "https://zgayfxymgwspukmrqfxp.supabase.co")!, key: "sb_publishable_j_oqzELG3k05gOkjyRczRQ_ZVnK17uW",
+                              bg: 0x14161A, surface: 0x1F2227, ink: 0xECE8DF, accent: 0xF2A33A,
+                              langs: [.ar, .he], logo: URL(string: "https://naiefcar.darb.co.il/icons/icon-512.png"),
+                              whatsapp: "972547227619", site: URL(string: "https://naiefcar.darb.co.il")),
     ]
 }

@@ -15135,6 +15135,98 @@
           }
         }
       }
+    },
+    "לשאול בוואטסאפ": {
+      "extractionState": "manual",
+      "localizations": {
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לשאול בוואטסאפ"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اسأل على واتساب"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ask on WhatsApp"
+          }
+        }
+      }
+    },
+    "התקשרו למחיר": {
+      "extractionState": "manual",
+      "localizations": {
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "התקשרו למחיר"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اتصل للسعر"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Call for the price"
+          }
+        }
+      }
+    },
+    "נמכר": {
+      "extractionState": "manual",
+      "localizations": {
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "נמכר"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "انباعت"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sold"
+          }
+        }
+      }
+    },
+    "המכוניות של %@, עם תמונות ופרטים, ושאלה בוואטסאפ בלי לצאת מדרב": {
+      "extractionState": "manual",
+      "localizations": {
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "המכוניות של %@, עם תמונות ופרטים, ושאלה בוואטסאפ בלי לצאת מדרב"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "سيارات %@، بالصور والتفاصيل، والسؤال على واتساب بدون ما تطلع من درب"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@'s cars, with photos and details, and a WhatsApp question without leaving Darb"
+          }
+        }
+      }
     }
   }
 }

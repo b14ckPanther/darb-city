@@ -104,7 +104,8 @@ struct ShopDoorCard: View {
                     .offset(y: -32).padding(.bottom, -32)
                     VStack(alignment: .leading, spacing: 3) {
                         Text(L("היכנסו לחנות")).font(.darb(size: 24, .black, relativeTo: .title))
-                        Text(look.shelf ? L("המוצרים של %@, מחירים ותמונות, והזמנה בלי לצאת מדרב", name) : L("התפריט של %@, מחירים ותמונות, והזמנה בלי לצאת מדרב", name)).font(.darb(.footnote, .semibold)).opacity(0.8)
+                        Text(look.source.system == .lot ? L("המכוניות של %@, עם תמונות ופרטים, ושאלה בוואטסאפ בלי לצאת מדרב", name)
+                             : look.shelf ? L("המוצרים של %@, מחירים ותמונות, והזמנה בלי לצאת מדרב", name) : L("התפריט של %@, מחירים ותמונות, והזמנה בלי לצאת מדרב", name)).font(.darb(.footnote, .semibold)).opacity(0.8)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     Spacer(minLength: 0)

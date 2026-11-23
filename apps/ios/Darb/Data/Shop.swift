@@ -29,8 +29,12 @@ struct Shop: Codable, Sendable {
         var tint: UInt32? = nil
         /// What it is for, in a few words each: hair types, needs.
         var tags: [String]? = nil
-        /// The amount in the pack, as printed.
+        /// The amount in the pack, as printed; for a car, its number on the lot.
         var detail: String? = nil
+        /// Every photo, when there is more than one (a car's).
+        var gallery: [URL]? = nil
+        /// The question sent on WhatsApp about this one item, in the business's own words.
+        var ask: String? = nil
     }
     let name: String
     let tagline: String?
@@ -101,6 +105,7 @@ enum ShopLoader {
         let shop = switch s.system {
         case .kitchen: try await kitchen(s, lang)
         case .shelf: try await shelf(s, lang)
+        case .lot: try await lot(s, lang)
         }
         let enc = JSONEncoder(); enc.dateEncodingStrategy = .iso8601
         try? enc.encode(shop).write(to: file(id, lang))
@@ -212,6 +217,124 @@ enum ShopLoader {
             featured: p.filter { $0.featured == true }.map(\.id),
             minOrder: st?.minOrder,
             note: [clean(st?.deliveryNote), clean(st?.orderNote)].compactMap { $0 }.joined(separator: " "),
+            fetched: .now)
+    }
+
+    // MARK: a car lot (Rechev Abu Firas)
+
+    private struct Car: Decodable {
+        let id: String
+        let stock_no: Int
+        let make: String, model: String
+        let trim: String?
+        let year: Int
+        let km: Int?, hand: Int?, price: Int?, prev_price: Int?
+        let gearbox: String?, fuel: String?, body: String?
+        let color_ar: String?, color_he: String?
+        let status: String
+        let sold_at: String?
+        let photos: [String]?
+        let notes_ar: String?, notes_he: String?
+        let featured: Bool?
+        let position: Int?
+        let created_at: String?
+    }
+    private struct Lot: Decodable {
+        let name_ar: String?, name_he: String?
+        let tagline_ar: String?, tagline_he: String?
+        let sold_visible_days: Int?
+        let payment_ar: [String]?, payment_he: [String]?
+    }
+
+    /// Car makes and models written in Hebrew, by their brand names.
+    private static let brandNames: [String: String] = [
+        "סקודה": "Skoda", "פולקסווגן": "Volkswagen", "פוקסווגן": "Volkswagen", "סיאט": "Seat", "רנו": "Renault",
+        "טויוטה": "Toyota", "מאזדה": "Mazda", "סוזוקי": "Suzuki", "סיטרואן": "Citroën", "אופל": "Opel", "יונדאי": "Hyundai",
+        "קיה": "Kia", "ניסאן": "Nissan", "הונדה": "Honda", "מיצובישי": "Mitsubishi", "פיג'ו": "Peugeot", "פיגו": "Peugeot",
+        "שברולט": "Chevrolet", "פורד": "Ford", "ב.מ.וו": "BMW", "במוו": "BMW", "מרצדס": "Mercedes", "אאודי": "Audi",
+        "פיאט": "Fiat", "סובארו": "Subaru", "דאצ'יה": "Dacia", "לקסוס": "Lexus", "ג'יפ": "Jeep", "וולוו": "Volvo",
+        "אוקטביה": "Octavia", "אוקטאביה": "Octavia", "סופרב": "Superb", "פאביה": "Fabia", "קודיאק": "Kodiaq", "קארוק": "Karoq",
+        "איביזה": "Ibiza", "לאון": "Leon", "גולף": "Golf", "פולו": "Polo", "פאסאט": "Passat", "שירוקו": "Scirocco", "טיגואן": "Tiguan",
+        "גרנד": "Grand", "קופה": "Coupe", "מגאן": "Megane", "קליאו": "Clio", "קפצ'ור": "Captur", "קורולה": "Corolla", "יאריס": "Yaris",
+        "קאמרי": "Camry", "פריוס": "Prius", "בירלנגו": "Berlingo", "זפירה": "Zafira", "אסטרה": "Astra", "קורסה": "Corsa",
+        "איי 30": "i30", "טוסון": "Tucson", "ספורטאז'": "Sportage", "פיקנטו": "Picanto", "ריו": "Rio", "סיד": "Ceed",
+        "סוויפט": "Swift", "ויטרה": "Vitara", "מאזדה 3": "Mazda 3", "סיוויק": "Civic", "ג'אז": "Jazz", "פוקוס": "Focus",
+    ]
+    private static func latin(_ text: String) -> String {
+        if let whole = brandNames[text.trimmingCharacters(in: .whitespaces)] { return whole }
+        return text.split(separator: " ").map { brandNames[String($0)] ?? String($0) }.joined(separator: " ")
+    }
+
+    private static func lot(_ s: ShopSource, _ lang: ShopLang) async throws -> Shop {
+        async let cars: [Car] = rows(s, "cars?select=*")
+        async let settings: [Lot] = rows(s, "lot_settings?select=*&limit=1")
+        let (c, st) = try await (cars, settings)
+        let set = st.first
+        let he = lang == .he
+        func clean(_ v: String?) -> String? { v.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 } }
+        // the lot's own words, as its website writes them
+        let bodies: [String: (String, String)] = [
+            "sedan": ("سيدان", "סדאן"), "hatchback": ("هاتشباك", "האצ'בק"), "suv": ("جيب", "פנאי-שטח"),
+            "crossover": ("كروس أوفر", "קרוסאובר"), "wagon": ("ستيشن", "סטיישן"), "coupe": ("كوبيه", "קופה"),
+            "convertible": ("مكشوفة", "קבריולט"), "mpv": ("ميني فان", "מיני-ואן"), "pickup": ("تندر", "טנדר"),
+            "van": ("فان", "ואן"), "commercial": ("تجارية", "מסחרי")]
+        let gears = ["auto": ("أوتوماتيك", "אוטומטית"), "manual": ("جير عادي", "ידנית")]
+        let fuels = ["petrol": ("بنزين", "בנזין"), "hybrid": ("هايبرد", "היברידי"), "electric": ("كهربا", "חשמלי"),
+                     "diesel": ("سولار", "דיזל"), "plugin": ("بلاج إن", "פלאג-אין")]
+        func word(_ t: (String, String)?) -> String? { t.map { he ? $0.1 : $0.0 } }
+        // sold cars stay on show for as many days as the lot chose, the newest sale first
+        let keepDays = Double(set?.sold_visible_days ?? 7)
+        let iso = ISO8601DateFormatter(); iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let shown = c.filter { car in
+            guard car.status == "sold" else { return true }
+            guard let at = car.sold_at.flatMap({ iso.date(from: $0) }) else { return false }
+            return Date.now.timeIntervalSince(at) < keepDays * 86_400
+        }
+        .sorted { a, b in
+            if (a.status == "sold") != (b.status == "sold") { return b.status == "sold" }
+            if a.status == "sold" { return (a.sold_at ?? "") > (b.sold_at ?? "") }
+            if (a.featured ?? false) != (b.featured ?? false) { return a.featured ?? false }
+            if (a.position ?? 0) != (b.position ?? 0) { return (a.position ?? 0) < (b.position ?? 0) }
+            return (a.created_at ?? "") > (b.created_at ?? "")
+        }
+        let num = NumberFormatter(); num.numberStyle = .decimal; num.locale = Locale(identifier: "en_US")
+        let items = shown.map { car -> Shop.Item in
+            // a make or model kept in Hebrew is shown by its brand name outside Hebrew, so a screen keeps one language
+            let name = he ? "\(car.make) \(car.model)" : "\(latin(car.make)) \(latin(car.model))"
+            let plate = String(format: "%03d", car.stock_no)
+            let photos = (car.photos ?? []).compactMap(URL.init(string:))
+            let link = s.site.map { $0.appendingPathComponent("car/\(car.id)").absoluteString } ?? ""
+            var facts: [String] = [String(car.year)]
+            if let km = car.km { facts.append((num.string(from: NSNumber(value: km)) ?? String(km)) + (he ? " ק\"מ" : " كم")) }
+            if let hand = car.hand { facts.append((he ? "יד " : "إيد ") + String(hand)) }
+            if let g = word(car.gearbox.flatMap { gears[$0] }) { facts.append(g) }
+            if let f = word(car.fuel.flatMap { fuels[$0] }) { facts.append(f) }
+            if let col = clean(he ? car.color_he : car.color_ar) { facts.append(col) }
+            return Shop.Item(
+                id: car.id, categories: ["*"] + [car.body ?? ""].filter { !$0.isEmpty } + (car.status == "sold" ? ["sold"] : []),
+                name: name, line: clean(car.trim).map { "\($0) · \(car.year)" } ?? String(car.year),
+                note: clean(he ? car.notes_he : car.notes_ar),
+                price: car.price.map(Double.init), sizes: nil,
+                image: photos.first, available: car.status != "sold",
+                badge: car.prev_price != nil && car.price != nil && car.prev_price! > car.price! ? (he ? "ירד מחיר" : "نزل السعر") : nil,
+                tags: facts, detail: "#" + plate, gallery: photos.count > 1 ? photos : nil,
+                ask: he ? "שלום, לגבי \(name) \(car.year) (מספר \(plate)), עדיין זמין?\n\(link)"
+                        : "مرحبا، بسأل عن \(name) \(car.year) (رقم \(plate))، لسا متوفرة؟\n\(link)")
+        }
+        let available = shown.filter { $0.status != "sold" }
+        let usedBodies = bodies.keys.filter { b in available.contains { $0.body == b } }
+            .sorted { a, b in available.filter { $0.body == a }.count > available.filter { $0.body == b }.count }
+        var cats = [Shop.Category(id: "*", name: L("הכל", in: lang.ui), subtitle: nil, image: nil)]
+        cats += usedBodies.map { Shop.Category(id: $0, name: word(bodies[$0]) ?? $0, subtitle: nil, image: nil) }
+        if shown.contains(where: { $0.status == "sold" }) { cats.append(Shop.Category(id: "sold", name: he ? "נמכרו" : "انباعت", subtitle: nil, image: nil)) }
+        let window = available.filter { $0.featured == true } + available.filter { $0.featured != true }
+        let pay = (he ? set?.payment_he : set?.payment_ar) ?? []
+        return Shop(
+            name: clean(he ? set?.name_he : set?.name_ar) ?? clean(set?.name_ar) ?? "",
+            tagline: clean(he ? set?.tagline_he : set?.tagline_ar),
+            logo: s.logo, heroes: [], categories: cats, items: items,
+            featured: window.prefix(6).map(\.id),
+            note: pay.isEmpty ? nil : pay.joined(separator: " · "),
             fetched: .now)
     }
 
