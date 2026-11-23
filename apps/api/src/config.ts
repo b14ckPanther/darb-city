@@ -86,6 +86,16 @@ export interface FieldConfig {
   readsPerDay: number;
 }
 
+/** Apple Wallet: the Pass Type ID certificate and key (PEM, or PEM base64-encoded on one line). */
+export interface WalletConfig {
+  passType: string;
+  teamId: string;
+  cert: string | null;
+  key: string | null;
+  /** Where Wallet registers phones and asks for newer passes (Apple appends /v1/...). */
+  serviceUrl: string;
+}
+
 export interface AppConfig {
   databaseUrl: string;
   port: number;
@@ -96,6 +106,7 @@ export interface AppConfig {
   inquiry: InquiryConfig;
   join: JoinConfig;
   field: FieldConfig;
+  wallet: WalletConfig;
   production: boolean;
 }
 
@@ -141,6 +152,11 @@ const schema = z.object({
   CLERK_JWT_KEY: optional,
   CLERK_AUTHORIZED_PARTIES: optional,
   ADMIN_EMAILS: optional,
+  WALLET_PASS_TYPE: z.string().min(1).default("pass.il.co.darb.loyalty"),
+  WALLET_TEAM_ID: z.string().min(1).default("KHQ29Z6A7S"),
+  WALLET_PASS_CERT: optional,
+  WALLET_PASS_KEY: optional,
+  WALLET_SERVICE_URL: z.string().url().default("https://api.darb.co.il/wallet"),
   REVALIDATE_URL: z
     .string()
     .url()
@@ -260,6 +276,13 @@ export function loadConfig(env: NodeJS.ProcessEnv): AppConfig {
       adminEmails: list(e.ADMIN_EMAILS).map((m) => m.toLowerCase()),
     },
     admin: { revalidateUrl: e.REVALIDATE_URL ?? null, revalidateSecret: e.REVALIDATE_SECRET },
+    wallet: {
+      passType: e.WALLET_PASS_TYPE,
+      teamId: e.WALLET_TEAM_ID,
+      cert: e.WALLET_PASS_CERT,
+      key: e.WALLET_PASS_KEY,
+      serviceUrl: e.WALLET_SERVICE_URL.replace(/\/+$/, ""),
+    },
     inquiry: {
       rateLimit: e.INQUIRY_RATE_LIMIT,
       rateWindowSeconds: e.INQUIRY_RATE_WINDOW_SECONDS,
