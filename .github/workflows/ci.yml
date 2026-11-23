@@ -54,6 +54,9 @@ jobs:
       - name: Map test tiles are reproducible
         run: pnpm --filter @darb/web exec node scripts/tiles/make-test-tiles.mjs --check
       - name: Migrate and seed the database
+        # the search quality set ranks answers on the full map, retired imports included
+        env:
+          SEED_RETIRED: "1"
         run: pnpm --filter @darb/api db:deploy && pnpm --filter @darb/api db:seed
       - name: The migrated database matches the Prisma schema (no drift)
         run: pnpm --filter @darb/api exec prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code

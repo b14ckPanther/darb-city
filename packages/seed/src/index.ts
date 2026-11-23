@@ -46,12 +46,19 @@ export const loadShowroom = (): SeedBusiness[] => {
 /**
  * Real businesses from public open data: every file in data/listings/ (one per source, its source
  * recorded in the file). Basic listings, never examples, so they load with or without the showroom.
+ * SEED_RETIRED=1 also loads data/retired/, the imports Darb switched off: CI's search quality set
+ * measures ranking on that full map, never production.
  */
-export const loadListings = (): SeedBusiness[] =>
-  readdirSync(new URL("../data/listings/", import.meta.url))
+const listingFiles = (dir: "listings" | "retired") =>
+  readdirSync(new URL(`../data/${dir}/`, import.meta.url))
     .filter((file) => file.endsWith(".json"))
     .sort()
-    .flatMap((file) => read<{ businesses: SeedBusiness[] }>(`listings/${file}`).businesses);
+    .map((file) => `${dir}/${file}`);
+export const loadListings = (): SeedBusiness[] =>
+  [
+    ...listingFiles("listings"),
+    ...(process.env.SEED_RETIRED === "1" ? listingFiles("retired") : []),
+  ].flatMap((file) => read<{ businesses: SeedBusiness[] }>(file).businesses);
 /** Every real business: Darb's clients and the open-data listings. */
 export const loadReal = (): SeedBusiness[] => [...loadClients().businesses, ...loadListings()];
 /** Showroom examples plus every real business. */
