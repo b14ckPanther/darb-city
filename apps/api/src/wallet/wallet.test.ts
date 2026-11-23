@@ -297,3 +297,28 @@ it("wakes every phone holding a card when an offer changes", async () => {
   expect(paused.status).toBe(200);
   await expect.poll(() => pusher.sent.flat()).toContain(PUSH);
 });
+
+it("lists every partner on the front, each language drawn on its own", async () => {
+  const { code, offerId, secret } = await setUp();
+  const second = await http()
+    .post("/admin/loyalty/offers")
+    .set("authorization", ADMIN)
+    .send({
+      businessId: f.abuSalim.id,
+      title: { he: "ארוחה", en: "A meal" },
+      reward: { he: "ארוחה חינם", en: "A free meal" },
+      goal: 5,
+      cooldownMinutes: 180,
+    });
+  expect(second.status).toBe(201);
+  await http().post("/loyalty/staff/stamp").set("authorization", BARISTA).send({ code, offerId });
+  const files = unzip((await download(secret)).body as Buffer);
+  for (const lang of ["he", "ar", "en"])
+    for (const name of ["strip.png", "strip@2x.png", "strip@3x.png"])
+      expect(files.has(`${lang}.lproj/${name}`), `${lang} ${name}`).toBe(true);
+  expect(files.has("strip.png")).toBe(false);
+  const pass = JSON.parse(files.get("pass.json")!.toString("utf8"));
+  expect(pass.storeCard.headerFields[0].value).toBe(1);
+  expect(pass.storeCard.auxiliaryFields[0].value).toBe(2);
+  expect(pass.storeCard.secondaryFields[0].changeMessage).toBe("newStamp");
+}, 60_000);
