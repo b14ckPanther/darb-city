@@ -80,6 +80,10 @@ struct StampView: View {
                     .font(.system(size: 22, weight: .heavy, design: .monospaced))
                     .environment(\.layoutDirection, .leftToRight)
                 if let message { note(message) }
+                if card.standings.isEmpty {
+                    Text(L("אין עדיין הטבה פעילה. יוצרים הטבה בניהול, ואז מחתימים כאן."))
+                        .font(.darb(.subheadline)).foregroundStyle(.secondary)
+                }
                 ForEach(card.standings) { s in
                     VStack(alignment: .leading, spacing: 12) {
                         StandingCard(standing: s)

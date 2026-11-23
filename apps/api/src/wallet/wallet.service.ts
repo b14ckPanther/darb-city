@@ -22,6 +22,7 @@ export class WalletService {
   private readonly logger = new Logger(WalletService.name);
   readonly creds: PassCredentials | null;
   private readonly images: Map<string, Buffer>;
+  private readonly door = asset("door.jpg");
 
   constructor(
     @Inject(APP_CONFIG) private readonly config: AppConfig,
@@ -82,7 +83,7 @@ export class WalletService {
       scanUrl: scanUrl(card.code),
     });
     for (const [n, b] of this.images) files.set(n, b);
-    for (const [n, b] of await strip(front)) files.set(n, b);
+    for (const [n, b] of await strip(front, this.door)) files.set(n, b);
     return { data: signedPass(files, this.creds), updatedAt: card.updatedAt };
   }
 

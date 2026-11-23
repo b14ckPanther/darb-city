@@ -48,9 +48,9 @@ const COPY: Record<string, Record<Lang, string>> = {
   toGo: { he: "נשאר", ar: "باقي", en: "To go" },
   ready: { he: "מוכן", ar: "جاهزة", en: "Ready" },
   readyValue: {
-    he: "ההטבה מחכה לכם בקופה",
-    ar: "الهدية بتستناكم عند الصندوق",
-    en: "Your reward is waiting at the counter",
+    he: "מחכה לכם בקופה",
+    ar: "بتستناكم عند الصندوق",
+    en: "Waiting at the counter",
   },
   offers: { he: "הטבות", ar: "عروض", en: "Offers" },
   emptyLabel: { he: "כרטיס דרב", ar: "بطاقة درب", en: "Darb card" },
@@ -106,12 +106,13 @@ export function passContent(card: LoyaltyCardDto, s: PassSettings) {
       value: `${Math.min(front.stamps, o.goal)}/${o.goal}`,
       changeMessage: copy("newStamp"),
     });
-    primary.push({
+    // the strip is the stamps themselves, so nothing is written across it: the offer sits below
+    secondary.push({
       key: "offer",
       label: put("f.business", (l) => pick(o.business.name, l)),
       value: put("f.reward", (l) => pick(o.reward, l)),
     });
-    secondary.push(
+    auxiliary.push(
       front.ready
         ? {
             key: "state",
@@ -128,8 +129,8 @@ export function passContent(card: LoyaltyCardDto, s: PassSettings) {
     if (card.standings.length > 1)
       auxiliary.push({ key: "offers", label: copy("offers"), value: card.standings.length });
   } else {
-    primary.push({ key: "offer", label: copy("emptyLabel"), value: copy("emptyValue") });
-    secondary.push({ key: "state", label: copy("howLabel"), value: copy("howValue") });
+    secondary.push({ key: "offer", label: copy("emptyLabel"), value: copy("emptyValue") });
+    auxiliary.push({ key: "state", label: copy("howLabel"), value: copy("howValue") });
   }
 
   const back: object[] = card.standings.map((st, i) => ({
@@ -181,55 +182,89 @@ export function passContent(card: LoyaltyCardDto, s: PassSettings) {
   return { files, front };
 }
 
+const FOREST_HEX = "#0B2219";
+
+/** A round crop of the door: lit in colour for a stamp given, dark and quiet for one still to come. */
+async function coin(door: Buffer, px: number, lit: boolean): Promise<Buffer> {
+  const mask = Buffer.from(
+    `<svg width="${px}" height="${px}"><circle cx="${px / 2}" cy="${px / 2}" r="${px / 2}" fill="#fff"/></svg>`,
+  );
+  const art = sharp(door).resize(px, px);
+  if (!lit) art.modulate({ brightness: 0.28, saturation: 0.15 });
+  return art
+    .composite([{ input: mask, blend: "dest-in" }])
+    .png()
+    .toBuffer();
+}
+
+/** Rows of stamps for a goal: one row up to five, then two rows. */
+export function layout(goal: number) {
+  const rows = goal <= 5 ? 1 : 2;
+  const perRow = Math.ceil(goal / rows);
+  const gap = perRow > 7 ? 8 : 13;
+  const size = Math.min(rows === 1 ? 74 : 57, (375 - 24 - gap * (perRow - 1)) / perRow);
+  const rowGap = 12;
+  const top = (144 - (rows * size + (rows - 1) * rowGap)) / 2;
+  return Array.from({ length: goal }, (_, i) => {
+    const row = Math.floor(i / perRow);
+    const inRow = row === rows - 1 ? goal - perRow * (rows - 1) : perRow;
+    const width = inRow * size + (inRow - 1) * gap;
+    return {
+      x: (375 - width) / 2 + (i % perRow) * (size + gap),
+      y: top + row * (size + rowGap),
+      size,
+    };
+  });
+}
+
 /**
- * The strip behind the front fields: the stamps as a row of dots, mustard when stamped, a quiet ring when not.
- * Flat fills only. Drawn at 1x, 2x and 3x (375 by 144 points).
+ * The strip across the front of the card: the stamps themselves. Each is a coin with the Darb door, which lights
+ * up in gold when the counter stamps it; the rest wait dark. A card with no offer yet shows one door, lit.
+ * Drawn at 1x, 2x and 3x (375 by 144 points).
  */
-export async function strip(front: LoyaltyStandingDto | null): Promise<Map<string, Buffer>> {
+export async function strip(
+  front: LoyaltyStandingDto | null,
+  door: Buffer,
+): Promise<Map<string, Buffer>> {
   const W = 375;
   const H = 144;
   const goal = front?.offer.goal ?? 0;
   const done = Math.min(front?.stamps ?? 0, goal);
-  const rows = goal > 10 ? 2 : 1;
-  const perRow = Math.ceil(goal / rows);
-  const gap = rows === 2 ? 6 : 8;
-  // kept low on the strip, clear of the reward written across its top
-  const size = Math.min(rows === 2 ? 20 : 26, (W - 32 - gap * (perRow - 1)) / Math.max(perRow, 1));
-  const shapes: string[] = [];
-  for (let i = 0; i < goal; i++) {
-    const row = Math.floor(i / perRow);
-    const col = i % perRow;
-    const inRow = row === rows - 1 ? goal - perRow * (rows - 1) : perRow;
-    const width = inRow * size + (inRow - 1) * gap;
-    const x = (W - width) / 2 + col * (size + gap) + size / 2;
-    const y = H - 14 - (rows - 1 - row) * (size + gap) - size / 2;
-    const r = size / 2;
-    if (i < done) {
-      const k = r * 0.42;
-      shapes.push(
-        `<circle cx="${x}" cy="${y}" r="${r}" fill="${MUSTARD}"/>`,
-        `<path d="M ${x - k} ${y + k * 0.05} L ${x - k * 0.25} ${y + k * 0.75} L ${x + k} ${y - k * 0.6}" stroke="${FOREST}" stroke-width="${r * 0.28}" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
-      );
-    } else {
-      shapes.push(
-        `<circle cx="${x}" cy="${y}" r="${r - 1}" fill="none" stroke="rgba(251,247,236,0.32)" stroke-width="2"/>`,
-      );
-    }
-  }
-  const svg = (scale: number) =>
-    Buffer.from(
-      `<svg xmlns="http://www.w3.org/2000/svg" width="${W * scale}" height="${H * scale}" viewBox="0 0 ${W} ${H}">` +
-        `<rect width="${W}" height="${H}" fill="${FOREST}"/>` +
-        `<rect y="${H - 1}" width="${W}" height="1" fill="rgba(255,195,48,0.35)"/>` +
-        shapes.join("") +
-        `</svg>`,
-    );
+  const spots = front ? layout(goal) : [{ x: (W - 118) / 2, y: (H - 118) / 2, size: 118 }];
   const out = new Map<string, Buffer>();
   for (const [name, scale] of [
     ["strip.png", 1],
     ["strip@2x.png", 2],
     ["strip@3x.png", 3],
-  ] as const)
-    out.set(name, await sharp(svg(scale)).png().toBuffer());
+  ] as const) {
+    const layers: { input: Buffer; left: number; top: number }[] = [];
+    let rings = "";
+    for (const [i, p] of spots.entries()) {
+      const lit = !front || i < done;
+      const px = Math.round(p.size * scale);
+      layers.push({
+        input: await coin(door, px, lit),
+        left: Math.round(p.x * scale),
+        top: Math.round(p.y * scale),
+      });
+      const c = { x: (p.x + p.size / 2) * scale, y: (p.y + p.size / 2) * scale };
+      const r = (p.size / 2 - 1) * scale;
+      rings += lit
+        ? `<circle cx="${c.x}" cy="${c.y}" r="${r}" fill="none" stroke="${MUSTARD}" stroke-width="${1.8 * scale}"/>`
+        : `<circle cx="${c.x}" cy="${c.y}" r="${r}" fill="none" stroke="rgba(251,247,236,0.16)" stroke-width="${1.5 * scale}"/>`;
+    }
+    const overlay = Buffer.from(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${W * scale}" height="${H * scale}">${rings}</svg>`,
+    );
+    out.set(
+      name,
+      await sharp({
+        create: { width: W * scale, height: H * scale, channels: 4, background: FOREST_HEX },
+      })
+        .composite([...layers, { input: overlay, left: 0, top: 0 }])
+        .png()
+        .toBuffer(),
+    );
+  }
   return out;
 }

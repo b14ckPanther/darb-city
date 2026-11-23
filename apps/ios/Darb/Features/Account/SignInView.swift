@@ -69,12 +69,10 @@ struct SignInView: View {
                 MenuRow(symbol: "person.crop.circle.fill", title: account.email ?? L("מחוברים"),
                         detail: account.isAdmin ? L("מנהל דרב") : account.rolesUnknown ? L("מחוברים") : account.stampsFor.isEmpty ? L("עוד לא צוות של עסק") : L("צוות")) { EmptyView() }
             }
-            if account.isAdmin || !account.stampsFor.isEmpty {
-                Button { open(.stamp) } label: {
-                    MenuRow(symbol: "qrcode.viewfinder", title: L("החתמת כרטיס"), detail: L("סריקה במצלמה, החתמה בנגיעה"), tint: .mustard)
-                }
-                .buttonStyle(PressStyle(scale: 0.985))
+            Button { open(.stamp) } label: {
+                MenuRow(symbol: "qrcode.viewfinder", title: L("החתמת כרטיס"), detail: L("סריקה במצלמה, החתמה בנגיעה"), tint: .mustard)
             }
+            .buttonStyle(PressStyle(scale: 0.985))
             if account.isAdmin {
                 Button { open(.admin) } label: {
                     MenuRow(symbol: "slider.horizontal.3", title: L("ניהול"), detail: L("הטבות, קישורי צוות וכיסוי לפי ישוב"), tint: Color(hex: 0x66CCFF))
