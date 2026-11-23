@@ -1,14 +1,15 @@
 import SwiftUI
 import UIKit
 
-// A business's own pictures: its logo, its cover, its photos, its storefront.
-// No business in the snapshot has given one yet, so today these views are not on screen at all.
-// A name starting with "demo:" is not a picture: it is a drawn placeholder for the `-darbDemoMedia`
+// A business's own pictures: its logo, its cover, its photos, its storefront. A name is either an address on
+// Darb's media server (what a business gave in the admin, kept on the phone once seen, ImageStore) or a picture
+// in the app. A name starting with "demo:" is not a picture: it is a drawn placeholder for the `-darbDemoMedia`
 // testing argument, made of Darb's own 3D objects and shapes, and always marked "הדגמה".
 
 enum Media {
     static func isDemo(_ name: String) -> Bool { name.hasPrefix("demo:") }
-    static func image(_ name: String) -> UIImage? { isDemo(name) ? nil : UIImage(named: name) }
+    static func isRemote(_ name: String) -> Bool { name.hasPrefix("https://") }
+    static func image(_ name: String) -> UIImage? { isDemo(name) || isRemote(name) ? nil : UIImage(named: name) }
 }
 
 /// The small "הדגמה" mark on a placeholder.
@@ -33,7 +34,15 @@ struct LogoView: View {
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: size * 0.3, style: .continuous)
         Group {
-            if let image = Media.image(name) {
+            if Media.isRemote(name) {
+                KeptImage(url: URL(string: name)) { $0.resizable().scaledToFill() } placeholder: {
+                    ZStack {
+                        ColorField(color: tint)
+                        Text(initial).font(.darb(size: size * 0.52, .black)).foregroundStyle(Color.onColor)
+                    }
+                }
+                .background(Color.white)
+            } else if let image = Media.image(name) {
                 Image(uiImage: image).resizable().scaledToFill()
             } else {
                 ZStack {
@@ -66,7 +75,12 @@ struct PhotoView: View {
     var variant = 0
 
     var body: some View {
-        if let image = Media.image(name) {
+        if Media.isRemote(name) {
+            Color.clear.overlay {
+                KeptImage(url: URL(string: name), fill: Color(hexString: art.tint).opacity(0.3)) { $0.resizable().scaledToFill() }
+            }
+            .clipped()
+        } else if let image = Media.image(name) {
             Color.clear.overlay { Image(uiImage: image).resizable().scaledToFill() }.clipped()
         } else {
             let tint = Color(hexString: art.tint)

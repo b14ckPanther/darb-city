@@ -59,7 +59,7 @@ struct PlaceView: View {
         let current = pool.first { $0.id == selected } ?? pool.first
         let profile = current.flatMap { store.profile($0.id) }
         // until the stage shows the place it keeps the need's own colours, whatever the place's are
-        let style = StageStyle(query: query, profile: profile, art: current.map { store.art(for: $0.business) })
+        let style = StageStyle(query: query, profile: profile, art: current.map { store.art(for: $0.business) }, cover: current?.business.cover)
         // a business's own page shows what the business itself published. A stand-in page exists only for a demo profile.
         let tabs = tabs(paid: store.isPaid(profile) && (profile?.items.isEmpty == false || profile?.demo == true))
         let sponsor = town == nil ? store.pageSponsor(kinds: query.kinds, nearest: all.first { $0.id != query.pinned } ?? all.first) : nil
@@ -333,8 +333,9 @@ struct PlaceView: View {
             ZStack {
                 if let e = current {
                     let own = store.art(for: e.business)
-                    // opened from a tile, the page keeps the tile's own object, so nothing swaps as it grows
-                    let art = own.logo == nil && !query.art.isEmpty && (flies || own.render == nil) ? ArtRef(render: query.art, symbol: own.symbol, tint: own.tint) : own
+                    // while the tile is still growing into the page it keeps the tile's object, so nothing swaps
+                    // mid-flight; once the page has settled it is the place's own, the same as its card in the rail
+                    let art = own.logo == nil && !query.art.isEmpty && flies && !resolved ? ArtRef(render: query.art, symbol: own.symbol, tint: own.tint) : own
                     // a partner's page carries their own logo, ringed; everyone else's the object on a sticker plate
                     if let look = DeluxeLook.of(e.business.id, lang: store.lang) {
                         LogoRing(url: look.shop?.logo, bg: look.bg, accent: look.accent, size: 136)
@@ -546,8 +547,10 @@ struct PlaceView: View {
 
     /// The business's own photos: up to three on a free listing, all of them on a paid one. Nothing is shown when it has none.
     @ViewBuilder private func photos(_ e: Entry, profile: BusinessProfile?) -> some View {
-        if let p = profile, !p.photos.isEmpty {
-            let shown = store.isPaid(p) ? p.photos : Array(p.photos.prefix(BusinessProfile.freePhotos))
+        let given = profile.map(\.photos).flatMap { $0.isEmpty ? nil : $0 } ?? store.details?[e.business.id]?.photos ?? []
+        if !given.isEmpty {
+            // photos given in the admin are all shown; a profile's follow its plan
+            let shown = profile.map { store.isPaid($0) ? given : Array(given.prefix(BusinessProfile.freePhotos)) } ?? given
             let art = store.art(for: e.business)
             ScrollView(.horizontal) {
                 HStack(spacing: 8) {
@@ -747,10 +750,10 @@ struct StageStyle {
     let art: ArtRef?
     let hasObject = true
 
-    init(query: PlaceQuery, profile: BusinessProfile?, art: ArtRef?) {
+    init(query: PlaceQuery, profile: BusinessProfile?, art: ArtRef?, cover: String? = nil) {
         color = query.color
         palette = profile?.palette
-        cover = profile?.cover
+        self.cover = profile?.cover ?? cover
         self.art = art
     }
 
