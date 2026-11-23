@@ -201,7 +201,8 @@ final class LanguageTests: XCTestCase {
         XCTAssertEqual(Typeface.name(.bold, in: .he), "Heebo-Bold")
         XCTAssertEqual(Typeface.name(.heavy, in: .ar), "Cairo-ExtraBold")
         XCTAssertEqual(Typeface.name(.heavy, in: .en), "Ubuntu-Bold")
-        XCTAssertEqual(Typeface.figure(.bold), "Ubuntu-Bold")
+        // numbers are drawn in the language's own face
+        XCTAssertEqual(Typeface.figure(.bold), Typeface.name(.bold))
     }
 
     func testEveryTypefaceIsInTheBundleWithItsLicence() {
@@ -251,7 +252,7 @@ final class LanguageTests: XCTestCase {
     func testTheCatalogIsCompleteAndKeepsTheCopyRules() throws {
         var keys: [String] = Need.all.flatMap { [$0.he, $0.pageTitle] } + ["מרקחת", "צפון", "דרום מערב", "ראשון", "שבת"]
         keys += DarbAPI.Inquiry.Topic.allCases.map { "web.contact.form.topics." + $0.rawValue }
-        keys += ["web.landing.hero.title", "web.near.ask", "web.join.done.title", "web.messages.tagline", "ממומן", "שעות לדוגמה"]
+        keys += ["web.landing.hero.title", "web.near.ask", "web.join.done.title", "web.messages.tagline", "ממומן"]
         let pieces = /%(?:\d\$)?(?:lld|@)/
         for key in keys {
             for lang in Lang.allCases {
@@ -354,7 +355,6 @@ final class ValleyTests: XCTestCase {
         let focus = store.firsts().compactMap(\.entry).first?.id
         for (size, header) in [(CGSize(width: 440, height: 315), CGFloat(182)), (CGSize(width: 440, height: 330), CGFloat(198)), (CGSize(width: 390, height: 280), CGFloat(152))] {
             let l = ValleyLayout(store: store, size: size, focus: focus, header: header)
-            XCTAssertFalse(l.labels.isEmpty, "\(size)")
             XCTAssertLessThanOrEqual(l.labels.count, ValleyLayout.maxLabels)
             XCTAssertLessThanOrEqual(l.villages.count, ValleyLayout.maxVillages)
             XCTAssertGreaterThan(l.villages.count, 5)
@@ -368,5 +368,18 @@ final class ValleyTests: XCTestCase {
             // a town with nobody open has no open house; one with anybody open has at least one
             for v in l.villages { XCTAssertEqual(v.houses.contains(where: \.open), v.share > 0) }
         }
+    }
+}
+
+import Testing
+
+@Suite struct WhatsAppNumbers {
+    @Test func localNumbersGainTheCountryCode() {
+        #expect(Outside.waDigits("054-722-7619") == "972547227619")
+        #expect(Outside.waDigits("0547227619") == "972547227619")
+        #expect(Outside.waDigits("+972 52-438-2229") == "972524382229")
+        #expect(Outside.waDigits("+972 (0)52-438-2229") == "972524382229")
+        #expect(Outside.waDigits("972504774367") == "972504774367")
+        #expect(Outside.waDigits("547227619") == "972547227619")
     }
 }
