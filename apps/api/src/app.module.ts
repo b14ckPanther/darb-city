@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { AdminModule } from "./admin/admin.module.js";
 import { AiModule } from "./ai/ai.module.js";
+import { AppDataModule } from "./app-data/app-data.module.js";
 import { BusinessesModule } from "./businesses/businesses.module.js";
 import { HealthController } from "./health/health.controller.js";
 import { HelpersModule } from "./helpers/helpers.module.js";
@@ -27,6 +28,7 @@ import { TaxonomyModule } from "./taxonomy/taxonomy.module.js";
     JoinModule,
     AdminModule,
     HelpersModule,
+    AppDataModule,
   ],
   controllers: [HealthController],
 })
